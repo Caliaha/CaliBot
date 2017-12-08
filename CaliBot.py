@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 import sys
 
-# Authorize bot link: https://discordapp.com/oauth2/authorize?&client_id=362335676248621068&scope=bot&permissions=271932480
+# Authorize bot link: ``````````````````````````````````````````````````````
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='CaliBot')
 bot.ADMINACCOUNT = config.ADMINACCOUNT
@@ -30,7 +30,7 @@ async def on_ready():
 if __name__ == "__main__":
 	#bot.load_extension('utils')
 	bot.load_extension('wow')
-	bot.load_extension('color')
+	#bot.load_extension('color')
 	bot.load_extension('tf2')
 	bot.load_extension('announce')
 	bot.load_extension('wynncraft')
