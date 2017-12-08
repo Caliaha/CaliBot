@@ -250,7 +250,7 @@ class WoW():
 			if toonClass[1] in CLASSCOLORS_FULL:
 				color = discord.Color(int(CLASSCOLORS_FULL[toonClass[1].lower()], 16))
   
-		embed=discord.Embed(title='Mythic+ Data', url='https://www.wowprogress.com/character/us/' + realm + '/' + character, color=color)
+		embed=discord.Embed(title='Mythic+ Data for ' + character.capitalize() + ' @ ' + realm.capitalize(), url='https://www.wowprogress.com/character/us/' + realm + '/' + character, color=color)
 		embed.add_field(name='Mythic+ Dungeons completed within the time limit', value='**+2** -> ' + mythicTwo[1] + ', **+5** -> ' + mythicFive[1] + ', **+10** -> ' + mythicTen[1], inline=False)
 		#embed.set_thumbnail(url='https://render-us.worldofwarcraft.com/character/' + toon['thumbnail'])
 
