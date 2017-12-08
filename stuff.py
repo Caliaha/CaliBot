@@ -1,4 +1,49 @@
-﻿class BoxIt():
+﻿from functools import wraps
+import pymysql.cursors
+
+def checkPermissions(command):
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			print(command)
+			if ctx.message.channel.is_private is True:
+				return await func(*args, **kwargs)
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			serverID = ctx.message.server.id
+			try:
+				with connection.cursor() as cursor:
+					#Check if entry exists then update or create one
+					sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+					cursor.execute(sql, [serverID, command])
+					print(serverID, command)
+					result = cursor.fetchone()
+					if result is not None:
+						print(result['disabled'])
+						if (int(result['disabled']) == 1):
+							await self.bot.send_message(ctx.message.channel, "I'm sorry but commands relating to " + command + " have been disabled.")
+							return False
+					return await func(*args, **kwargs)
+			finally:
+				connection.close()
+		return wrapper
+	return decorator
+
+def no_pm():
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			if ctx.message.channel.is_private is False:
+				return await func(*args, **kwargs)
+			await self.bot.send_message(ctx.message.channel, "I'm sorry but this command can't be used in a direct message")
+			return False
+		return wrapper
+	return decorator
+
+class BoxIt():
 	BOX_UPPER_LEFT = u'╔'
 	BOX_UPPER_RIGHT = u'╗'
 	BOX_LOWER_LEFT = u'╚'
