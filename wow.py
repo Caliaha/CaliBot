@@ -1,4 +1,6 @@
-﻿import discord
+﻿import aiohttp
+import async_timeout
+import discord
 from discord.ext import commands
 import json
 import pymysql.cursors
@@ -108,6 +110,24 @@ class WoW():
 		return urllib.parse.quote_plus(characterName[1]), urllib.parse.quote_plus(realm.replace(" ","-"))
 
 	async def fetchWebpage(self, url):
+		attempts = 0
+		while attempts < 5:
+			try:
+				async with aiohttp.get(url) as r:
+					if r.status == 200:
+						return await r.text()
+					else:
+						raise
+			except:
+				print("Failed to grab webpage", url, attempts)
+				attempts += 1
+		raise ValueError('Unable to fetch ur')
+
+	@commands.command()
+	async def wtest(self):
+		await self.fetchWebpageAIO('test')
+
+	async def fetchWebpageOLD(self, url):
 		attempts = 0
 		while attempts < 5:
 			try:
@@ -296,6 +316,62 @@ class WoW():
 			return characterPerfData[1], characterPerfData[2], characterPerfData[3]
 		except:
 			return "N/A", "N/A", "N/A"
+
+	# Most of this stuff was copy/pasted from the !logs command FIXME
+	async def getCharacterLog(self, characterID, selectedRankingZone = '17'):
+		if characterID is None:
+			return False
+  
+		try:
+			urllib.request.urlopen('https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID).read().decode('utf-8') # FIXME
+		except:
+			print("Failed to update character")
+
+		#characterNameRealmPattern = re.compile('(.*?) on (.*?) - Warcraft Logs')
+		#characterNameRealm = characterNameRealmPattern.search(characterIDPage)
+		#characterClassPattern = re.compile('<div id="character-class" class=".*?">\r\n(.*?) \r\n(.*?)</div>')
+		#characterClass = characterClassPattern.search(characterIDPage)
+		#characterPortraitPattern = re.compile('<img id="character-portrait-image" src="(.*?)">')
+		#characterPortrait = characterPortraitPattern.search(characterIDPage)
+
+		statsPattern = re.compile('<div class="stats" id="stats-10-(\d)-Any-Any">\n<div class="best-perf-avg">\nBest Perf. Avg<br>\n<b style="font-size:32px" class="(.*?)">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class="(.*?)">\n(.*?)<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(.*?)\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)<tr><td colspan=2 style="font-size:10px;">Out of (.*?) possible All Star Points</td></tr>\n</table>\n</div>')
+		RankingMetrics = [ 'dps', 'hps' ]
+		characterData = { }
+
+		didStuff = False
+		for RankingMetric in RankingMetrics:
+			try:
+				statsDataPage = await self.fetchWebpage('https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID + '/' + selectedRankingZone + '/' + RankingMetric)
+			except:
+				print("Exception while accessing statsDataPage")
+				return False
+			statsData = statsPattern.findall(statsDataPage)
+			if statsData is None:
+				return False
+  
+			didStuff = False
+			for statData in statsData:
+				difficulty = 'Unknown';
+   
+				if statData[2] is not '-':
+					didStuff = True
+
+					if statData[0] is '5': difficulty = 'mythic'
+					if statData[0] is '4': difficulty = 'heroic'
+					if statData[0] is '3': difficulty = 'normal'
+					if statData[0] is '2': difficulty = 'lfr'
+					if difficulty not in characterData:
+						characterData[difficulty] = { }
+					if RankingMetric not in characterData[difficulty]:
+						characterData[difficulty][RankingMetric] = { }
+
+  
+					characterData[difficulty][RankingMetric] = { 'best': statData[2], 'median': statData[4], 'kills': statData[5], 'allstar': statData[6], 'allstartotal': statData[7] }
+					#warcraftLogsMessage += difficulty + '\n   Best Performance Avg -> ' + statData[2] + '\n   Median Performance Avg -> ' + statData[4] + '\n   Kills Ranked -> ' + statData[5] + '\n   All Star Points -> ' + statData[6] + ' Out of ' + statData[7] + ' Possible\n'
+		if didStuff:
+			return characterData
+		else:
+			return False
 
 	
 	@commands.command(pass_context=True)
@@ -492,9 +568,147 @@ class WoW():
 		finally:
 			connection.close()
 
+	async def sendBulkyMessage(self, ctx, message, append = '', prepend = ''):
+			lines = message.splitlines(True)
+			newMessage = prepend
+			for line in lines:
+				if len(newMessage + line) > 1995:
+					await self.bot.send_message(ctx.message.channel, newMessage + append)
+					newMessage = prepend
+				newMessage += line
+			if newMessage != prepend:
+				await self.bot.send_message(ctx.message.channel, newMessage + prepend)
+
 	@commands.command(pass_context=True)
 	async def guildperf(self, ctx, *args):
-		"""Shows guild performance and realm rankings"""
+		"""Shows guild allstars performance and realm rankings"""
+		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
+		raidID = { 'ant': '17', 'tomb': '13' }
+		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
+
+		try:
+			guild = args[0]
+		except:
+			guild = "Clan Destined"
+		try:
+			realm = args[1]
+		except:
+			realm = "Cairne"
+		
+		
+		if (len(args) == 0 and ctx.message.server is not None):
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			try:
+				with connection.cursor() as cursor:
+					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
+					cursor.execute(sql, (ctx.message.server.id))
+					result = cursor.fetchone()
+					print(result)
+					if result is not None:
+						guild = result["guild"]
+						realm = result["realm"]
+						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+			finally:
+				connection.close()
+
+		totalRequests = 0
+		try:
+			updatableMessage
+		except:
+			updatableMessage = await self.bot.send_message(ctx.message.channel, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: ' + str(totalRequests))
+		await self.bot.send_typing(ctx.message.channel)
+		#try:
+		#	region = args[2]
+		#except:
+		region = "US"
+			
+		try:
+			difficulty = args[2]
+			if difficulty not in difficultyID:
+				raise
+		except:
+			difficulty = "normal"
+		try:
+			raid = args[3]
+			if raid not in raidID:
+				raise
+		except:
+			raid = 'ant'
+		print(guild, realm)
+		
+		try:
+			guildList = await self.fetchWebpage("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+		except urllib.error.HTTPError as e:
+			print(e.reason)
+			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
+			return False
+		
+		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
+
+		print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
+		guildMatch = guildPattern.search(guildList)
+		print(guildMatch)
+		print("Raid: ", raidID[raid])
+		print("Difficulty: ", difficultyID[difficulty])
+		if guildMatch is not None:
+				guildID = guildMatch[1]
+				guild = guildMatch[2]
+		else:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+			return False
+		print("GuildID: ", guildID)
+		
+		try:
+			guildRoster = await self.fetchWebpage('https://www.warcraftlogs.com/guilds/characters/' + guildID)
+		except:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to fetch the guild roster')
+		#print(guildRoster)
+		
+		characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">\w+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
+		matches = characterPattern.search(guildRoster)
+		#print(matches)
+				
+		showNormal = False
+		showHeroic = False
+		RankingMetrics = [ 'dps', 'hps' ]
+		difficulties = [ 'normal', 'heroic' ]
+		boxes = { }
+		didStuff = { }
+
+		for character in characterPattern.findall(guildRoster):
+			print(character[0], character[1], character[2], character[3])
+			if int(character[3]) == 110:
+				totalRequests += 1
+				try:
+					await self.bot.edit_message(updatableMessage, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: ' + str(totalRequests))
+				except:
+					print("Couldn't update totals message")
+				characterData = await self.getCharacterLog(character[1])
+				if characterData:
+					for difficulty in difficulties:
+						if difficulty not in boxes:
+							boxes[difficulty] = BoxIt()
+							boxes[difficulty].setTitle(difficulty.capitalize())
+							boxes[difficulty].addRow( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] )
+						try:
+							char = characterData[difficulty]
+							data = [ character[2], char['dps']['kills'], char['dps']['best'], char['dps']['median'], char['dps']['allstar'], char['hps']['best'], char['hps']['median'], char['hps']['allstar'] ]
+							boxes[difficulty].addRow(data)
+							print('Added character data')
+							didStuff[difficulty] = True
+						except:
+							print('No data for', character[2], difficulty)
+		for difficulty in didStuff:
+			if didStuff[difficulty]:
+				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
+		if len(didStuff) == 0:
+			await self.bot.send_message(ctx.message.channel, 'No log data found for guild')
+					
+
+	@commands.command(pass_context=True)
+	async def allstars(self, ctx, *args):
+		"""Shows guild allstars performance and realm rankings"""
 		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
 		raidID = { 'ant': '17', 'tomb': '13' }
 		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }

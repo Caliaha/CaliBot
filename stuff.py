@@ -71,7 +71,13 @@ class BoxIt():
 
 			if len(str(item)) > self.biggest[index]:
 				self.biggest[index] = len(str(item))
-					
+
+	def isEmpty(self):
+		if len(self.data) == 0:
+			return True
+		else:
+			return False
+
 	def setTitle(self, title):
 		self.title = str(title)
 
