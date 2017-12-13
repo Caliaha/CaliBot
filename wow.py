@@ -86,7 +86,7 @@ class WoW():
 						discordID = author.id
 					cursor.execute(sql, discordID)
 					result = cursor.fetchone()
-					if result is not None:
+					if result is not None and result['character'] is not None and result['realm'] is not None:
 						return result['character'], result['realm']
 					else:
 						return None, None

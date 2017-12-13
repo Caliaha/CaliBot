@@ -1,5 +1,6 @@
 ﻿from functools import wraps
 import pymysql.cursors
+import re
 
 def checkPermissions(command):
 	def decorator(func):
@@ -30,6 +31,22 @@ def checkPermissions(command):
 		return wrapper
 	return decorator
 
+def superuser():
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			if (ctx.message.server.owner == ctx.message.author):
+				print("checkPermissions, user is server owner")
+				return await func(*args, **kwargs)
+			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
+				print("checkPermissions, user is bot owner")
+				return await func(*args, **kwargs)
+			return False
+		return wrapper
+	return decorator
+
 def no_pm():
 	def decorator(func):
 		@wraps(func)
@@ -42,6 +59,19 @@ def no_pm():
 			return False
 		return wrapper
 	return decorator
+
+def getSnowflake(string):
+	if string.isdigit():
+		return string
+	snowflakePattern = re.compile('<\@\!?(\d+)>')
+	snowflake = snowflakePattern.match(string)
+	if snowflake:
+		return snowflake[1]
+	rolePattern = re.compile('<\@\&(\d+)>')
+	failedMention = re.compile('\@.+')
+	if (string == '@everyone' or string == '@here' or rolePattern.match(string) or failedMention.match(string)):
+		print('Role was passed, ignoring')
+		return False
 
 class BoxIt():
 	BOX_UPPER_LEFT = u'╔'

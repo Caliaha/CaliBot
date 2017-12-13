@@ -15,7 +15,6 @@ class Permissions():
 		if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 			print("checkPermissions, user is bot owner")
 			return True
-		#print (ctx.message.server.owner.id, ctx.message.author.id)
 		return False
 
 	@commands.command(pass_context=True, hidden = True)

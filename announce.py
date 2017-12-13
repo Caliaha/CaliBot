@@ -1,7 +1,8 @@
 import asyncio
-from subprocess import Popen, PIPE
 from discord.ext import commands
-from stuff import no_pm
+import pymysql.cursors
+from stuff import no_pm, superuser
+from subprocess import Popen, PIPE
 		
 class Announce():
 	def __init__(self, bot):
@@ -29,6 +30,22 @@ class Announce():
 				self.VOICE_CHANNELS[server].player = player
 				await self.control.wait()
 
+	async def fetchPhoneticName(self, member):
+		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		try:
+			with connection.cursor() as cursor:
+				sql = "SELECT `phonetic` FROM `usersettings` WHERE `discordID`=%s"
+				cursor.execute(sql, member.id)
+				result = cursor.fetchone()
+				if result is not None and result['phonetic'] is not None:
+					return result['phonetic']
+				else:
+					return member.name
+		except:
+			return member.name
+		finally:
+			connection.close()
+
 	async def on_voice_state_update(self, before, after):
 		server = before.server
 		voiceBefore = before.voice.voice_channel
@@ -40,13 +57,13 @@ class Announce():
 		if voiceBefore is not self.VOICE_CHANNELS[server].channel and voiceAfter is self.VOICE_CHANNELS[server].channel:
 			print(before.name,'has joined the channel')
 			tts = { }
-			tts["message"] = "<volume level='50'>" + before.name + " has joined."
+			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(before) + " has joined."
 			tts["server"] = server
 			await self.queue.put(tts)
 			return
 		if voiceBefore is self.VOICE_CHANNELS[server].channel and voiceAfter is not self.VOICE_CHANNELS[server].channel:
 			tts = { }
-			tts["message"] = "<volume level='50'>" + after.name + ' has left.'
+			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(after) + ' has left.'
 			tts["server"] = server
 			print(after.name,'has left the channel')
 			await self.queue.put(tts)
@@ -91,6 +108,15 @@ class Announce():
 			await self.VOICE_CHANNELS[server].disconnect()
 			self.DO_ANNOUNCEMENTS.remove(ctx.message.server)
 			del self.VOICE_CHANNELS[server]
+
+	@commands.command(pass_context=True, hidden=True)
+	@superuser()
+	@no_pm()
+	async def say(self, ctx, message):
+		tts = { }
+		tts["message"] = "<volume level='50'>" + message
+		tts["server"] = ctx.message.author.server
+		await self.queue.put(tts)
 
 def setup(bot):
 	bot.add_cog(Announce(bot))
