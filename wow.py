@@ -340,7 +340,7 @@ class WoW():
 					if RankingMetric not in characterData[difficulty]:
 						characterData[difficulty][RankingMetric] = { }
 
-					characterData[difficulty][RankingMetric] = { 'best': statData[2], 'median': statData[4], 'kills': statData[5], 'allstar': statData[6], 'allstartotal': statData[7] }
+					characterData[difficulty][RankingMetric] = { 'best': float(statData[2]), 'median': float(statData[4]), 'kills': int(statData[5]), 'allstar': float(statData[6]), 'allstartotal': float(statData[7].replace(',', '') ) }
 		if didStuff:
 			return characterData
 		else:
@@ -915,6 +915,7 @@ class WoW():
 		sabersEye = False
 		gemsCheapEquipped = 0
 		gemsMidTierEquipped = 0
+		legendariesNotUpgraded = 0
 		for gear in gearSlots:
 			#embed.add_field(name="Gear", value=gearData, inline=True)
 			#gearData = ""
@@ -963,6 +964,9 @@ class WoW():
 						if missingEnchants != '':
 							missingEnchants += ', '
 						missingEnchants += enchant + ' ' + gear.capitalize() + ' enchant'
+				if int(toon['items'][gear]['quality']) == 5 and (int(toon['items'][gear]['itemLevel']) > 910 and int(toon['items'][gear]['itemLevel']) < 1000):
+					legendariesNotUpgraded += 1
+
 				msg += '\n' + str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - ' + toon['items'][gear]['name'] + ' - <' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + '> '
 				gearData += str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')\n'
 
@@ -999,6 +1003,10 @@ class WoW():
 		embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
 		embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
 		missingStuff = missingEnchants + '\n' + missingGems
+		if (legendariesNotUpgraded == 1):
+			missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendary not at max level'
+		elif (legendariesNotUpgraded > 1):
+			missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendaries not at max level'
 		if (missingStuff != '\n'):
 			embed.add_field(name="Gear Check", value=missingStuff, inline=True)
 		#print(toon['name'] + '** of **' + toon['realm'] + str(toon['items']['averageItemLevelEquipped']) + '* equipped, *' + str(toon['items']['averageItemLevel']) + '* total')
