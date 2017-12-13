@@ -21,7 +21,7 @@ class Announce():
 			print(ttsThing["server"])
 			if ttsThing["server"] in self.VOICE_CHANNELS:
 				server = ttsThing["server"]
-				process = Popen([self.bot.TTS_PROGRAM, self.file, ttsThing["message"]])
+				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, ttsThing["message"]])
 				(output, err) = process.communicate()
 				exit_code = process.wait()
  
@@ -31,8 +31,8 @@ class Announce():
 				await self.control.wait()
 
 	async def fetchPhoneticName(self, member):
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 		try:
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "SELECT `phonetic` FROM `usersettings` WHERE `discordID`=%s"
 				cursor.execute(sql, member.id)
@@ -83,13 +83,11 @@ class Announce():
 				await self.VOICE_CHANNELS[server].disconnect()
 				self.DO_ANNOUNCEMENTS.remove(ctx.message.server)
 				del self.VOICE_CHANNELS[server]
-				#await self.bot.send_message(ctx.message.channel, 'I Will no longer announce who joins or leaves for ' + channel.name)
 			else:
 				print('I have moved to another channel on the same guild')
 				await self.VOICE_CHANNELS[server].move_to(channel)
 		else:
 			self.DO_ANNOUNCEMENTS.append(ctx.message.server)
-			#await self.bot.send_message(ctx.message.channel, 'I will announce who joins or leaves for ' + channel.name)
 			voice = await self.bot.join_voice_channel(channel)
 			self.VOICE_CHANNELS[server] = voice
 

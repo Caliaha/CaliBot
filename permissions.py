@@ -1,29 +1,17 @@
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import no_pm
+from stuff import no_pm, superuser
 
 class Permissions():
 	def __init__(self, bot):
 		self.bot = bot
 		self.commands = [ 'color', 'wow' ]
-		
-	async def superuser(self, ctx):
-		if (ctx.message.server.owner == ctx.message.author):
-			print("checkPermissions, user is server owner")
-			return True
-		if (ctx.message.author.id == self.bot.ADMINACCOUNT):
-			print("checkPermissions, user is bot owner")
-			return True
-		return False
 
 	@commands.command(pass_context=True, hidden = True)
+	@superuser()
 	@no_pm()
 	async def toggle(self, ctx, command: str):
-		if not await self.superuser(ctx):
-			await self.bot.send_message(ctx.message.channel, "You don't have permission to use that command.")
-			return False
-		
 		if command not in self.commands:
 			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")
 			return False

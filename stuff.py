@@ -47,6 +47,15 @@ def superuser():
 		return wrapper
 	return decorator
 
+def isSuperUser(ctx):
+	if (ctx.message.server.owner == ctx.message.author):
+		print("checkPermissions, user is server owner")
+		return True
+	if (ctx.message.author.id == self.bot.ADMINACCOUNT):
+		print("checkPermissions, user is bot owner")
+		return True
+	return False
+
 def no_pm():
 	def decorator(func):
 		@wraps(func)

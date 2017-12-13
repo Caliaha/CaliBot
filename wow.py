@@ -4,7 +4,7 @@ from discord.ext import commands
 import json
 import pymysql.cursors
 import re
-from stuff import BoxIt, no_pm
+from stuff import BoxIt, no_pm, superuser
 import time
 import urllib.parse
 import urllib.request
@@ -471,35 +471,10 @@ class WoW():
 			await self.bot.send_message(ctx.message.channel, 'Failed to parse out wowtoken pricing information')
 			await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
 
-	def padString(self, string, padAmount, padStart = False, padCharacter = " "):
-		while len(string) < padAmount:
-			if padStart:
-				string = padCharacter + string
-			else:
-				string += padCharacter
-		return string
-
-	def centerpadString(self, string, padAmount, padCharacter = " "):
-		while len(string) < padAmount:
-			string = padCharacter + string + padCharacter
-		return string
-
-	async def checkPermissions(self, ctx, command):
-		if (ctx.message.server.owner == ctx.message.author):
-			print("checkPermissions, user is server owner")
-			return True
-		if (ctx.message.author.id == self.bot.ADMINACCOUNT):
-			print("checkPermissions, user is bot owner")
-			return True
-		#print (ctx.message.server.owner.id, ctx.message.author.id)
-		return False
-
 	@commands.command(pass_context=True)
+	@superuser()
 	@no_pm()
 	async def defaultguild(self, ctx, *args):
-		if not await self.checkPermissions(ctx, 'defaults'):
-			await self.bot.send_message(ctx.message.channel, "You don't have permission to use this command; or if you do then I haven't finished programming this part")
-			return False
 		try:
 			guild = args[0]
 			realm = args[1]
@@ -514,10 +489,9 @@ class WoW():
   
 		serverid = ctx.message.server.id
 		print(serverid)
-		
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 
 		try:
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
 				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
