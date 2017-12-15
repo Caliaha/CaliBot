@@ -20,7 +20,7 @@ class Settings():
 			value = None
 		userid = ctx.message.author.id
 		if member:
-			if isSuperUser(ctx):
+			if isSuperUser(self, ctx):
 				userid = getSnowflake(member)
 				if not userid:
 					return False

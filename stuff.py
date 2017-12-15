@@ -43,11 +43,12 @@ def superuser():
 			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 				print("checkPermissions, user is bot owner")
 				return await func(*args, **kwargs)
+			await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have permission to use this command.")
 			return False
 		return wrapper
 	return decorator
 
-def isSuperUser(ctx):
+def isSuperUser(self, ctx):
 	if (ctx.message.server.owner == ctx.message.author):
 		print("checkPermissions, user is server owner")
 		return True
@@ -55,6 +56,21 @@ def isSuperUser(ctx):
 		print("checkPermissions, user is bot owner")
 		return True
 	return False
+
+def doThumbs():
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			if (await func(*args, **kwargs)):
+				await self.bot.add_reaction(ctx.message, "\U0001F44D") # ThumbsUp
+				return True
+			else:
+				await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
+				return False
+		return wrapper
+	return decorator
 
 def no_pm():
 	def decorator(func):
@@ -64,7 +80,7 @@ def no_pm():
 			ctx = args[1]
 			if ctx.message.channel.is_private is False:
 				return await func(*args, **kwargs)
-			await self.bot.send_message(ctx.message.channel, "I'm sorry but this command can't be used in a direct message")
+			await self.bot.send_message(ctx.message.channel, "I'm sorry but this command can't be used in a direct message.")
 			return False
 		return wrapper
 	return decorator
