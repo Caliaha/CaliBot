@@ -138,7 +138,7 @@ class BoxIt():
 
 	
 	def padString(self, string, padAmount, padStart = False, padCharacter = " "):
-		if type(string) == int or type(string) == float: # Right aling integers
+		if type(string) == int or type(string) == float: # Right align integers
 			padStart = True
 		string = str(string)
 		while len(string) < padAmount:
