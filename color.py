@@ -6,23 +6,6 @@ from stuff import checkPermissions, doThumbs, no_pm
 
 CLASSCOLORS_FULL = {'death knight':'C41F3B', 'deathknight':'C41F3B', 'demon hunter':'A330C9', 'demonhunter':'A330C9', 'druid':'FF7D0A','hunter':'ABD473','mage':'69CCF0','monk':'00FF96','paladin':'F58CBA','priest':'FFFFFF','rogue':'FFF569','shaman':'0070DE','warlock':'9482C9','warrior':'C79C6E'}
 
-
-#def doThumbs(func):
-#	async def wrapper(*args, **kwargs):
-#		retval = func(*args, **kwargs)
-#		print(retval)
-#		return retval
-#	return wrapper
-
-#async def doThumbs():
-#	async def decorator_func(func):
-#		async def wrapper_func(*args, **kwargs):
-#			retval = func(*args, **kwargs)
-#			print("Retval: ", retval)
-#			return retval
-#		return wrapper_func
-#	return decorator_func
-
 class RoleColor():
 	def __init__(self, bot):
 		self.bot = bot
