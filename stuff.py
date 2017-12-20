@@ -2,6 +2,15 @@
 import pymysql.cursors
 import re
 
+def isSuperUser(self, ctx):
+	if (ctx.message.server.owner == ctx.message.author):
+		print("checkPermissions, user is server owner")
+		return True
+	if (ctx.message.author.id == self.bot.ADMINACCOUNT):
+		print("checkPermissions, user is bot owner")
+		return True
+	return False
+
 def checkPermissions(command):
 	def decorator(func):
 		@wraps(func)
@@ -15,9 +24,8 @@ def checkPermissions(command):
 			serverID = ctx.message.server.id
 			try:
 				with connection.cursor() as cursor:
-					#Check if entry exists then update or create one
 					sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-					cursor.execute(sql, [serverID, command])
+					cursor.execute(sql, (serverID, command))
 					print(serverID, command)
 					result = cursor.fetchone()
 					if result is not None:
@@ -25,7 +33,28 @@ def checkPermissions(command):
 						if (int(result['disabled']) == 1):
 							await self.bot.send_message(ctx.message.channel, "I'm sorry but commands relating to " + command + " have been disabled.")
 							return False
-					return await func(*args, **kwargs)
+					#return await func(*args, **kwargs)
+			finally:
+				connection.close()
+			if isSuperUser(self, ctx):
+				return await func(*args, **kwargs)
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			try:
+				with connection.cursor() as cursor:
+					sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+					cursor.execute(sql, (serverID, command))
+					result = cursor.fetchone()
+					if result is not None:
+						allowed_roles = result['allowed_roles'].split()
+						for role in ctx.message.author.roles:
+							if role.name in allowed_roles:
+								print(ctx.message.author.name, 'was allowed to use', command, 'on server', serverID)
+								return await func(*args, **kwargs)
+						else:
+							await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have any roles that have been allowed access to this command.")
+							return False
+						#print(result['allowed_roles'])
+					#return await func(*args, **kwargs)
 			finally:
 				connection.close()
 		return wrapper
@@ -47,15 +76,6 @@ def superuser():
 			return False
 		return wrapper
 	return decorator
-
-def isSuperUser(self, ctx):
-	if (ctx.message.server.owner == ctx.message.author):
-		print("checkPermissions, user is server owner")
-		return True
-	if (ctx.message.author.id == self.bot.ADMINACCOUNT):
-		print("checkPermissions, user is bot owner")
-		return True
-	return False
 
 def doThumbs():
 	def decorator(func):
@@ -97,6 +117,17 @@ def getSnowflake(string):
 	if (string == '@everyone' or string == '@here' or rolePattern.match(string) or failedMention.match(string)):
 		print('Role was passed, ignoring')
 		return False
+
+def getRoleID(string):
+	if string.isdigit():
+		return string
+	rolePattern = re.compile('<\@\&(\d+)>')
+	role = rolePattern.match(string)
+	if role:
+		return role[1]
+	if (string == '@everyone' or string == '@here'):
+		return string
+	return None
 
 class BoxIt():
 	BOX_UPPER_LEFT = u'╔'

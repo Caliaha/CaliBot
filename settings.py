@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import getSnowflake, superuser, isSuperUser
+from stuff import checkPermissions, getSnowflake, no_pm, superuser, isSuperUser
 
 class Settings():
 	def __init__(self, bot):
@@ -9,12 +9,13 @@ class Settings():
 		self.settings = [ 'phonetic', 'realm', 'character', 'battletag' ]
 
 	@commands.command(pass_context=True)
-	@superuser()
+	@no_pm()
+	@checkPermissions('set')
 	async def set(self, ctx, setting, value, member = ''):
-		await self.bot.send_typing(ctx.message.channel)
 		if setting not in self.settings:
 			await self.bot.send_message(ctx.message.channel, 'Usage: !set variable value')
 			return False
+		await self.bot.send_typing(ctx.message.channel)
 			
 		if value == '':
 			value = None
