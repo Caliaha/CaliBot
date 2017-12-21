@@ -292,11 +292,11 @@ class WoW():
 			await self.bot.send_message(ctx.message.channel, mythicMessage)
 		return True
 	
-	async def getIndividualPerformance(self, characterID, type, zone):
+	async def getIndividualPerformance(self, characterID, type, zone, difficulty):
 		try:
 			url = 'https://www.warcraftlogs.com/rankings/character_rankings_for_zone/' + characterID + '/' + zone + '/0/' + type + '/0/1/?keystone=0'
 			characterPage = await self.fetchWebpage(url)
-			characterPerfPattern = re.compile('Best Perf\. Avg<br>\n<b style="font-size:32px" class=".*?">(.*?)</b>.*?>Median Perf\. Avg:<.*?>\n(.*?)<tr>.*?>(\d+)', re.DOTALL)
+			characterPerfPattern = re.compile('<div class="stats" id="stats-10-' + difficulty + '-.*?">\nBest Perf\. Avg<br>\n<b style="font-size:32px" class=".*?">(.*?)</b>.*?>Median Perf\. Avg:<.*?>\n(.*?)<tr>.*?>(\d+)', re.DOTALL)
 			characterPerfData = characterPerfPattern.search(characterPage)
 			return characterPerfData[1], characterPerfData[2], characterPerfData[3]
 		except:
@@ -309,7 +309,7 @@ class WoW():
 		except:
 			print("Failed to update character")
 
-		statsPattern = re.compile('<div class="stats" id="stats-10-(\d)-Any-Any">\n<div class="best-perf-avg">\nBest Perf. Avg<br>\n<b style="font-size:32px" class="(.*?)">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class="(.*?)">\n(.*?)<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(.*?)\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)<tr><td colspan=2 style="font-size:10px;">Out of (.*?) possible All Star Points</td></tr>\n</table>\n</div>')
+		statsPattern = re.compile('<div class="stats" id="stats-10-(\d+)-Any-Any">\n<div class="best-perf-avg">\nBest Perf. Avg<br>\n<b style="font-size:32px" class="(.*?)">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class="(.*?)">\n(.*?)<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(.*?)\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)<tr><td colspan=2 style="font-size:10px;">Out of (.*?) possible All Star Points</td></tr>\n</table>\n</div>')
 		RankingMetrics = [ 'dps', 'hps' ]
 		characterData = { }
 
@@ -633,7 +633,7 @@ class WoW():
 		except:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to fetch the guild roster')
 		
-		characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">\w+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
+		characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">[\w ]+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
 		matches = characterPattern.search(guildRoster)
 
 		RankingMetrics = [ 'dps', 'hps' ]
@@ -653,7 +653,7 @@ class WoW():
 			updateMessage = 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: '
 		print(full)
 		for character in characterPattern.findall(guildRoster):
-#			print(character[0], character[1], character[2], character[3])
+			print(character[0], character[1], character[2], character[3])
 			if int(character[3]) == 110 and (full or (character[2] in attendance)):
 				totalRequests += 1
 				try:
@@ -671,7 +671,7 @@ class WoW():
 							char = characterData[difficulty]
 							data = [ character[2], char['dps']['kills'], char['dps']['best'], char['dps']['median'], char['dps']['allstar'], char['hps']['best'], char['hps']['median'], char['hps']['allstar'] ]
 							boxes[difficulty].addRow(data)
-							print('Added character data')
+							print('Added character data for', character[2])
 							didStuff[difficulty] = True
 						except:
 							print('No data for', character[2], difficulty)
@@ -700,8 +700,8 @@ class WoW():
 		
 		
 		if (len(args) == 0 and ctx.message.server is not None):
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			try:
+				connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 				with connection.cursor() as cursor:
 					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
 					cursor.execute(sql, (ctx.message.server.id))
@@ -779,7 +779,7 @@ class WoW():
 		urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 		urls['TANKING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 
-		message = '```Guild Performance for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
+		message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
 		didStuff = False
 		
 
@@ -814,7 +814,7 @@ class WoW():
 					print(character)
 					playerClass = 'N/A'
 					playerSpec = 'N/A'
-				best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3])
+				best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3], str(difficultyID[difficulty]))
 				totalRequests += 1
 				try:
 					await self.bot.edit_message(updatableMessage, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests))
