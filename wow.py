@@ -666,7 +666,7 @@ class WoW():
 						if difficulty not in boxes:
 							boxes[difficulty] = BoxIt()
 							boxes[difficulty].setTitle(difficulty.capitalize() + ' - <' + guild + '>')
-							boxes[difficulty].addRow( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] )
+							#boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
 						try:
 							char = characterData[difficulty]
 							data = [ character[2], char['dps']['kills'], char['dps']['best'], char['dps']['median'], char['dps']['allstar'], char['hps']['best'], char['hps']['median'], char['hps']['allstar'] ]
@@ -677,6 +677,8 @@ class WoW():
 							print('No data for', character[2], difficulty)
 		for difficulty in didStuff:
 			if didStuff[difficulty]:
+				boxes[difficulty].sort(7, True) # FIXME
+				boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
 				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
 		if len(didStuff) == 0:
 			await self.bot.send_message(ctx.message.channel, 'No log data found for guild')
@@ -787,7 +789,7 @@ class WoW():
 			print(urls[url])
 			box = BoxIt()
 			box.setTitle(url)
-			box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
+			#box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 			try:
 				guildData = await self.fetchWebpage(urls[url])
 				totalRequests += 1
@@ -822,6 +824,8 @@ class WoW():
 					print("Couldn't update totals message")
 				didStuff = True
 				box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
+			box.sort(6, True)
+			box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 			message += '\n' + box.box()
 		
 		if didStuff:
