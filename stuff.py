@@ -145,28 +145,38 @@ class BoxIt():
 	
 	def __init__(self):
 		self.title = ''
+		self.header = False
 		self.data = []
 		self.biggest = {}
-	
-	def addRow(self, row):
-		self.data.append(row)
 
+	def updateWidestColumn(self, row):
 		for index, item in enumerate(row):
 			if index not in self.biggest:
 				self.biggest[index] = 0
 
 			if len(str(item)) > self.biggest[index]:
 				self.biggest[index] = len(str(item))
+	
+	def addRow(self, row):
+		self.data.append(row)
+		self.updateWidestColumn(row)
 
 	def isEmpty(self):
 		if len(self.data) == 0:
 			return True
 		else:
 			return False
+	
+	def sort(self, column, reverse = False):
+		self.data.sort(key=lambda row: row[column], reverse = reverse)
 
 	def setTitle(self, title):
 		self.title = str(title)
 
+	def setHeader(self, header):
+		self.header = True
+		self.data.insert(0, header)
+		self.updateWidestColumn(header)
 	
 	def padString(self, string, padAmount, padStart = False, padCharacter = " "):
 		if type(string) == int or type(string) == float: # Right align integers
@@ -209,7 +219,7 @@ class BoxIt():
 			if index != 0:
 				row.append(seperator)
 			row.append(self.padString('', self.biggest[index]+2, False, lineChar))
-			width += len(item)
+			width += len(str(item))
 		row.append(self.BOX_VERT_HORIZ_CONNECTOR_RIGHT)
 		return row
 
@@ -243,7 +253,7 @@ class BoxIt():
 
 		for index, data in enumerate(self.data):
 			box.append(self.generateRow(data))
-			if index==0:
+			if index==0 and self.header:
 				box.append(self.generateSeperatorLine(data))
 
 		box.append(self.generateLastLine())
