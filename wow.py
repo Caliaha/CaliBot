@@ -800,7 +800,7 @@ class WoW():
 				await self.bot.send_message(ctx.message.channel, 'Something bad happened')
 
 			# Realm Rank, CharacterID, Zone, metric, Name, score
-			characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>(\d+).*?</tr>', re.DOTALL)
+			characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>([\d,]+).*?</tr>', re.DOTALL)
 			characterClassAndSpecPattern = re.compile('<img src="/img/icons/(.*?)-(.*?)\.jpg" class="players-table-spec-icon">')
 			
 
@@ -821,7 +821,7 @@ class WoW():
 				except:
 					print("Couldn't update totals message")
 				didStuff = True
-				box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6]) ] )
+				box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
 			message += '\n' + box.box()
 		
 		if didStuff:
