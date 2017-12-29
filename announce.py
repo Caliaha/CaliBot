@@ -14,6 +14,18 @@ class Announce():
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
 		self.file = '-w=' + self.bot.TTS_FILE
 
+	async def updateNickname(self, server, name, action='Error'):
+		print(server.me, name, self.bot.NAME)
+		if name is None:
+			newName = None
+		else:
+			newName = name + ' - ' + action
+			
+		try:
+			await self.bot.change_nickname(server.me, newName)
+		except:
+			print("Unable to change nickname")
+
 	async def playTTS(self):
 		while True:
 			self.control.clear()
@@ -21,6 +33,7 @@ class Announce():
 			print(ttsThing["server"])
 			if ttsThing["server"] in self.VOICE_CHANNELS:
 				server = ttsThing["server"]
+				await self.updateNickname(ttsThing["server"], ttsThing["name"], ttsThing["action"])
 				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, ttsThing["message"]])
 				(output, err) = process.communicate()
 				exit_code = process.wait()
@@ -29,6 +42,7 @@ class Announce():
 				player.start()
 				self.VOICE_CHANNELS[server].player = player
 				await self.control.wait()
+				await self.updateNickname(ttsThing["server"], None)
 
 	async def fetchPhoneticName(self, member):
 		try:
@@ -61,12 +75,17 @@ class Announce():
 		if voiceBefore is not self.VOICE_CHANNELS[server].channel and voiceAfter is self.VOICE_CHANNELS[server].channel:
 			print(before.name,'has joined the channel')
 			tts = { }
+			print(before.nick, before.name)
+			tts["name"] = before.nick or before.name
+			tts["action"] = 'Join'
 			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(before) + " has joined."
 			tts["server"] = server
 			await self.queue.put(tts)
 			return
 		if voiceBefore is self.VOICE_CHANNELS[server].channel and voiceAfter is not self.VOICE_CHANNELS[server].channel:
 			tts = { }
+			tts["name"] = before.nick or before.name
+			tts["action"] = 'Leave'
 			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(after) + ' has left.'
 			tts["server"] = server
 			print(after.name,'has left the channel')
@@ -129,21 +148,26 @@ class Announce():
 
 	async def on_ready(self):
 		print("Attempting to reconnect to all voice channels")
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-		with connection.cursor() as cursor:
-			sql = "SELECT `server`, `channel` FROM `voice_status`"
-			cursor.execute(sql)
-			results = cursor.fetchall()
-			for result in results:
-				print(result['server'], result['channel'])
-				server = self.bot.get_server(result['server'])
-				channel = self.bot.get_channel(result['channel'])
-				if server and channel:
-					await self.joinVoiceChannel(server, channel)
-#		except:
-#			print('Error reconnecting to voice things with db')
-#		finally:
-#			connection.close()
+		try:
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "SELECT `server`, `channel` FROM `voice_status`"
+				cursor.execute(sql)
+				results = cursor.fetchall()
+				for result in results:
+					print(result['server'], result['channel'])
+					server = self.bot.get_server(result['server'])
+					channel = self.bot.get_channel(result['channel'])
+					if server and channel:
+						await self.joinVoiceChannel(server, channel)
+		except:
+			print("on_ready() unable to connect to db")
+		finally:
+			connection.close()
+			
+		for server in self.bot.servers:
+			print("Resetting nickname for", server.name)
+			await self.updateNickname(server, None)
 
 	@commands.command(pass_context=True, description="Bot will join your voice channel and announces who joins or leaves the voice channel you are in, limit one per guild")
 	@no_pm()
