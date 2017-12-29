@@ -59,6 +59,20 @@ def checkPermissions(command):
 				connection.close()
 		return wrapper
 	return decorator
+	
+def isBotOwner():
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
+				print("checkPermissions, user is bot owner")
+				return await func(*args, **kwargs)
+			await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have permission to use this command.")
+			return False
+		return wrapper
+	return decorator
 
 def superuser():
 	def decorator(func):
