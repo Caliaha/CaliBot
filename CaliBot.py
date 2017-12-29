@@ -30,7 +30,7 @@ async def on_ready():
 	print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
 
 if __name__ == "__main__":
-	#bot.load_extension('utils')
+	bot.load_extension('utils')
 	bot.load_extension('permissions')
 	bot.load_extension('wow')
 	bot.load_extension('color')
