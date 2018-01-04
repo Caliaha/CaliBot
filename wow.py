@@ -894,9 +894,11 @@ class WoW():
 		gemsCheapEquipped = 0
 		gemsMidTierEquipped = 0
 		legendariesNotUpgraded = 0
+		totalLegendariesEquipped = 0
 		for gear in gearSlots:
 			#embed.add_field(name="Gear", value=gearData, inline=True)
 			#gearData = ""
+			socketData = ''
 			if gear in toon['items']:
 				sockets = await self.numSocketsGear(toon['items'][gear]['id'], toon['items'][gear]['context'], toon['items'][gear]['bonusLists'])
 				totalSockets += sockets
@@ -925,6 +927,8 @@ class WoW():
 						if missingGems != '':
 							missingGems += ', '
 						missingGems += gear.capitalize() + ' is missing ' + str(gemCount) + '/' + str(sockets) + ' gems'
+					if (sockets > 0):
+						socketData = ' (' + str(sockets - gemCount) + '/' + str(sockets) + ')'
 					
 				enchant = ''
 				if gear in LEGION_ENCHANTSLOTS:
@@ -942,11 +946,14 @@ class WoW():
 						if missingEnchants != '':
 							missingEnchants += ', '
 						missingEnchants += enchant + ' ' + gear.capitalize() + ' enchant'
-				if int(toon['items'][gear]['quality']) == 5 and (int(toon['items'][gear]['itemLevel']) > 910 and int(toon['items'][gear]['itemLevel']) < 1000):
-					legendariesNotUpgraded += 1
+
+				if int(toon['items'][gear]['quality']) == 5 and (int(toon['items'][gear]['itemLevel']) >= 910 and int(toon['items'][gear]['itemLevel']) <= 1000):
+					totalLegendariesEquipped += 1
+					if int(toon['items'][gear]['itemLevel']) < 1000:
+						legendariesNotUpgraded += 1
 
 				msg += '\n' + str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - ' + toon['items'][gear]['name'] + ' - <' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + '> '
-				gearData += str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')\n'
+				gearData += str(toon['items'][gear]['itemLevel']) + socketData + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')\n'
 
 						
 				#embed.add_field(name=gear.capitalize(), value=str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')', inline=False)
@@ -981,6 +988,8 @@ class WoW():
 		embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
 		embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
 		missingStuff = missingEnchants + '\n' + missingGems
+		if (totalLegendariesEquipped < 2):
+			missingStuff += '\nDoesn\'t have the max allowed number of legendaries! Only ' + str(totalLegendariesEquipped) + ' equipped.'
 		if (legendariesNotUpgraded == 1):
 			missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendary not at max level'
 		elif (legendariesNotUpgraded > 1):
