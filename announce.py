@@ -1,7 +1,7 @@
 import asyncio
 from discord.ext import commands
 import pymysql.cursors
-from stuff import no_pm, superuser
+from stuff import BoxIt, isBotOwner, no_pm, superuser
 from subprocess import Popen, PIPE
 		
 class Announce():
@@ -183,6 +183,31 @@ class Announce():
 		tts["message"] = "<volume level='50'>" + message
 		tts["server"] = ctx.message.author.server
 		await self.queue.put(tts)
+
+	@commands.command(pass_context=True, hidden=True)
+	@isBotOwner()
+	async def debugannounce(self, ctx):
+		message = BoxIt()
+		message.setTitle('Voice Channels - Announce')
+		for server, client in self.VOICE_CHANNELS.items():
+			message.addRow( [ client.server, client.channel, client.is_connected() ] )
+			print(server, client.server, client.channel, client.is_connected())
+		
+		message2 = BoxIt()
+		message2.setTitle('Voice Channels - Actual')
+		for key in self.bot.voice_clients:
+			message2.addRow( [ key.server, key.channel, key.is_connected() ] )
+			print(key, key.server, key.channel, key.is_connected())
+		
+		
+		
+		message.setHeader( [ 'Server', 'Channel', 'Connected' ] )
+		message2.setHeader( [ 'Server', 'Channel', 'Connected' ] )
+		
+		await self.bot.send_message(ctx.message.channel, '```' + message.box() + '```')
+		await self.bot.send_message(ctx.message.channel, '```' + message2.box() + '```')
+		await self.bot.send_message(ctx.message.channel, 'I have been asked to announce for the following servers: ' + ', '.join(str(server) for server in self.DO_ANNOUNCEMENTS))
+		await self.bot.send_message(ctx.message.channel, 'There should be no discrepancy between the three previous statements')
 
 def setup(bot):
 	bot.add_cog(Announce(bot))
