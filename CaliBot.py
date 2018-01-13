@@ -2,10 +2,12 @@
 import discord
 from discord.ext import commands
 import sys
+import time
 
 # Authorize bot link: https://discordapp.com/oauth2/authorize?&client_id=362335676248621068&scope=bot&permissions=271932480
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='CaliBot')
+bot.startTime = time.time()
 bot.NAME = config.NAME
 bot.ADMINACCOUNT = config.ADMINACCOUNT
 bot.APIKEY_WOW = config.APIKEY_WOW

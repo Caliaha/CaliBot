@@ -1,5 +1,8 @@
+from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 from stuff import isBotOwner
+import time
+import uptime
 
 class utils():
 	def __init__(self, bot):
@@ -23,6 +26,11 @@ class utils():
 	@isBotOwner()
 	async def serverowner(self, ctx):
 		await self.bot.send_message(ctx.message.channel, ctx.message.server.owner)
+
+	@commands.command(pass_context=True)
+	async def uptime(self, ctx):
+		await self.bot.send_message(ctx.message.channel, self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
+		await self.bot.send_message(ctx.message.channel, 'Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
 
 def setup(bot):
 	bot.add_cog(utils(bot))
