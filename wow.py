@@ -677,7 +677,7 @@ class WoW():
 							print('No data for', character[2], difficulty)
 		for difficulty in didStuff:
 			if didStuff[difficulty]:
-				boxes[difficulty].sort(7, True) # FIXME
+				boxes[difficulty].sort(0, False) # FIXME
 				boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
 				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
 		if len(didStuff) == 0:
@@ -779,7 +779,8 @@ class WoW():
 		urls = { }
 		urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/DPS/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 		urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-		urls['TANKING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+		urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+		urls['TANKING - DPS'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 
 		message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
 		didStuff = False
@@ -833,10 +834,14 @@ class WoW():
 			newMessage = ''
 			for line in lines:
 				if len(newMessage + line) > 1995:
+					#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid], description=newMessage + '```', color=0x9cf5a0)
+					#await self.bot.send_message(ctx.message.channel, embed=embed)
 					await self.bot.send_message(ctx.message.channel, newMessage + '```')
 					newMessage = '```'
 				newMessage += line
 			if newMessage != '':
+				#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid] + ' - Cont.', description=newMessage + '```', color=0x9cf5a0)
+				#await self.bot.send_message(ctx.message.channel, embed=embed)
 				await self.bot.send_message(ctx.message.channel, newMessage + '```')
 		else:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to find the right data')
