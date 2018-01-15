@@ -33,7 +33,8 @@ class Announce():
 			print(ttsThing["server"])
 			if ttsThing["server"] in self.VOICE_CHANNELS:
 				server = ttsThing["server"]
-				await self.updateNickname(ttsThing["server"], ttsThing["name"], ttsThing["action"])
+				if ttsThing["action"]:
+					await self.updateNickname(ttsThing["server"], ttsThing["name"], ttsThing["action"])
 				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, ttsThing["message"]])
 				(output, err) = process.communicate()
 				exit_code = process.wait()
@@ -120,7 +121,8 @@ class Announce():
 
 	async def joinVoiceChannel(self, server, channel):
 		print(server, channel)
-		self.DO_ANNOUNCEMENTS.append(server)
+		if server not in self.DO_ANNOUNCEMENTS: # Added to prevent duplicates when on_ready fires multiple times
+			self.DO_ANNOUNCEMENTS.append(server)
 		voice = await self.bot.join_voice_channel(channel)
 		self.VOICE_CHANNELS[server] = voice
 		await self.updateDB(server, channel)
@@ -182,6 +184,7 @@ class Announce():
 		tts = { }
 		tts["message"] = "<volume level='50'>" + message
 		tts["server"] = ctx.message.author.server
+		tts["action"] = None
 		await self.queue.put(tts)
 
 	@commands.command(pass_context=True, hidden=True)
