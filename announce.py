@@ -1,7 +1,7 @@
 import asyncio
 from discord.ext import commands
 import pymysql.cursors
-from stuff import BoxIt, isBotOwner, no_pm, superuser
+from stuff import BoxIt, cleanUserInput, isBotOwner, no_pm, superuser
 from subprocess import Popen, PIPE
 		
 class Announce():
@@ -46,6 +46,7 @@ class Announce():
 				await self.updateNickname(ttsThing["server"], None)
 
 	async def fetchPhoneticName(self, member):
+		
 		try:
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -54,12 +55,16 @@ class Announce():
 				result = cursor.fetchone()
 				if result is not None and result['phonetic'] is not None:
 					return result['phonetic']
-				else:
-					return member.name
+
 		except:
-			return member.name
+			print("Error with fetching phonetic")
 		finally:
 			connection.close()
+		
+		if member.nick is not None:
+			return cleanUserInput(member.nick)
+		else:
+			return cleanUserInput(member.name)
 
 	async def on_voice_state_update(self, before, after):
 		try:

@@ -2,6 +2,9 @@
 import pymysql.cursors
 import re
 
+def cleanUserInput(input):
+	return re.sub('[^a-zA-Z -]+', '', input)
+
 def isSuperUser(self, ctx):
 	if (ctx.message.server.owner == ctx.message.author):
 		print("checkPermissions, user is server owner")
