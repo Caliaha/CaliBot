@@ -1,6 +1,7 @@
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-from stuff import isBotOwner
+from stuff import isBotOwner, superuser
+import sys
 import time
 import uptime
 
@@ -26,6 +27,14 @@ class utils():
 	@isBotOwner()
 	async def serverowner(self, ctx):
 		await self.bot.send_message(ctx.message.channel, ctx.message.server.owner)
+
+	@commands.command(pass_context=True, hidden=True)
+	@superuser()
+	async def restart(self, ctx):
+		await self.bot.send_message(ctx.message.channel, 'I am restarting. It will take me a moment to reconnect')
+		print('Restarting script')
+		await self.bot.close()
+		await sys.exit()
 
 	@commands.command(pass_context=True)
 	async def uptime(self, ctx):
