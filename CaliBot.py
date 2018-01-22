@@ -19,14 +19,6 @@ bot.TTS_FILE = config.TTS_FILE
 bot.DEFAULT_EMBED_COLOR = '444580'
 bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0'
 
-@bot.command(pass_context=True, hidden=True)
-async def restart(ctx):
-	if ctx.message.author.id != bot.ADMINACCOUNT:
-		return False
-	print('Restarting script')
-	await bot.close()
-	await sys.exit()
-
 @bot.event
 async def on_ready():
 	print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
