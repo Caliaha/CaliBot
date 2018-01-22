@@ -14,6 +14,17 @@ class Announce():
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
 		self.file = '-w=' + self.bot.TTS_FILE
 
+	async def checkIfConnected(self, server):
+		print("Whoo")
+		if server in self.VOICE_CHANNELS:
+			if self.VOICE_CHANNELS[server] in self.bot.voice_clients:
+				print("I'm connected to voice")
+			else:
+				print("I'm not connected to voice but I should be")
+			pass
+		else:
+			print("checkIfConnected(), I'm not in this voice channels and this message should never trigger")
+
 	async def updateNickname(self, server, name, action='Error'):
 		print(server.me, name, self.bot.NAME)
 		if name is None:
@@ -32,6 +43,7 @@ class Announce():
 			ttsThing = await self.queue.get()
 			print(ttsThing["server"])
 			if ttsThing["server"] in self.VOICE_CHANNELS:
+				#await self.checkIfConnected(ttsThing["server"])
 				server = ttsThing["server"]
 				if ttsThing["action"]:
 					await self.updateNickname(ttsThing["server"], ttsThing["name"], ttsThing["action"])
@@ -44,6 +56,8 @@ class Announce():
 				self.VOICE_CHANNELS[server].player = player
 				await self.control.wait()
 				await self.updateNickname(ttsThing["server"], None)
+			else:
+				print("I was asked to announce for something that is not or no longer in self.VOICE_CHANNELS")
 
 	async def fetchPhoneticName(self, member):
 		
@@ -133,9 +147,19 @@ class Announce():
 		await self.updateDB(server, channel)
 
 	async def leaveVoiceChannel(self, server, channel):
-		await self.VOICE_CHANNELS[server].disconnect()
-		self.DO_ANNOUNCEMENTS.remove(server)
-		del self.VOICE_CHANNELS[server]
+		try:
+			await self.VOICE_CHANNELS[server].disconnect()
+		except:
+			print("ERROR: Failed to disconnect from voice in leaveVoiceChannel()")
+		try:
+			self.DO_ANNOUNCEMENTS.remove(server)
+		except:
+			print("ERROR: Failed to remove server from DO_ANNOUNCEMENTS in leaveVoiceChannel()")
+		try:
+			del self.VOICE_CHANNELS[server]
+		except:
+			print("ERROR: Failed to remove server from VOICE_CHANNELS in leaveVoiceChannel()")
+
 		await self.removeFromDB(server, channel)
 
 	async def joinOrMove(self, ctx):
@@ -151,7 +175,7 @@ class Announce():
 		elif channel:
 			await self.joinVoiceChannel(server, channel)
 		else:
-			await self.bot.send_message(ctx.message.channel, "I couldn't figure out what voice channel you were in.")
+			await self.bot.send_message(ctx.message.channel, "I couldn't figure out which voice channel you were in.")
 
 	async def on_ready(self):
 		print("Attempting to reconnect to all voice channels")
@@ -191,6 +215,22 @@ class Announce():
 		tts["server"] = ctx.message.author.server
 		tts["action"] = None
 		await self.queue.put(tts)
+
+	@commands.command(pass_context=True, hidden=True)
+	@no_pm()
+	@superuser()
+	async def forcereconnect(self, ctx):
+		await self.bot.send_message(ctx.message.channel, 'I will attempt to disconnect and rejoin the voice channel, this may not work.')
+		if ctx.message.author.server in self.VOICE_CHANNELS:
+			server = self.VOICE_CHANNELS[ctx.message.author.server]
+			try:
+				await self.leaveVoiceChannel(ctx.message.author.server, server.channel) 
+			except:
+				print("ERROR: Unable to leave voice channel in forcereconnect()")
+			try:
+				await self.joinVoiceChannel(ctx.message.author.server, server.channel)
+			except:
+				print("ERROR: Failed to join voice channel in forcereconnect()")
 
 	@commands.command(pass_context=True, hidden=True)
 	@isBotOwner()
