@@ -216,10 +216,11 @@ class Announce():
 		tts["action"] = None
 		await self.queue.put(tts)
 
-	@commands.command(pass_context=True, hidden=True)
+	@commands.command(pass_context=True)
 	@no_pm()
 	@superuser()
 	async def forcereconnect(self, ctx):
+		"""Bot attempts to leave and rejoin channel"""
 		await self.bot.send_message(ctx.message.channel, 'I will attempt to disconnect and rejoin the voice channel, this may not work.')
 		if ctx.message.author.server in self.VOICE_CHANNELS:
 			server = self.VOICE_CHANNELS[ctx.message.author.server]
