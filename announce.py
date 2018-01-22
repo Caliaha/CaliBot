@@ -187,7 +187,7 @@ class Announce():
 	@no_pm()
 	async def say(self, ctx, message):
 		tts = { }
-		tts["message"] = "<volume level='50'>" + message
+		tts["message"] = "<volume level='50'>" + cleanUserInput(message)
 		tts["server"] = ctx.message.author.server
 		tts["action"] = None
 		await self.queue.put(tts)
