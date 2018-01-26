@@ -1,6 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-from stuff import isBotOwner, superuser
+from stuff import isBotOwner, no_pm, superuser
 import sys
 import time
 import uptime
@@ -25,6 +25,7 @@ class utils():
 
 	@commands.command(pass_context=True, hidden=True)
 	@isBotOwner()
+	@no_pm()
 	async def serverowner(self, ctx):
 		await self.bot.send_message(ctx.message.channel, ctx.message.server.owner)
 
