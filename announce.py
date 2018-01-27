@@ -8,7 +8,6 @@ class Announce():
 	def __init__(self, bot):
 		self.bot = bot
 		self.VOICE_CHANNELS = {}
-		self.DO_ANNOUNCEMENTS = []
 		self.queue = asyncio.Queue()
 		self.control = asyncio.Event()
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
@@ -23,7 +22,7 @@ class Announce():
 				print("I'm not connected to voice but I should be")
 			pass
 		else:
-			print("checkIfConnected(), I'm not in this voice channels and this message should never trigger")
+			print("checkIfConnected(), I'm not in this voice channel and this message should never trigger")
 
 	async def updateNickname(self, server, name, action='Error'):
 		print(server.me, name, self.bot.NAME)
@@ -42,7 +41,7 @@ class Announce():
 			self.control.clear()
 			ttsThing = await self.queue.get()
 			print(ttsThing["server"])
-			if ttsThing["server"] in self.VOICE_CHANNELS:
+			if ttsThing["server"].id in self.VOICE_CHANNELS:
 				#await self.checkIfConnected(ttsThing["server"])
 				server = ttsThing["server"]
 				if ttsThing["action"]:
@@ -51,9 +50,9 @@ class Announce():
 				(output, err) = process.communicate()
 				exit_code = process.wait()
  
-				player = self.VOICE_CHANNELS[server].create_ffmpeg_player("./calibot.wav", after=self.control.set)
+				player = self.VOICE_CHANNELS[server.id].create_ffmpeg_player("./calibot.wav", after=self.control.set)
 				player.start()
-				self.VOICE_CHANNELS[server].player = player
+				self.VOICE_CHANNELS[server.id].player = player
 				await self.control.wait()
 				await self.updateNickname(ttsThing["server"], None)
 			else:
@@ -83,17 +82,17 @@ class Announce():
 	async def on_voice_state_update(self, before, after):
 		try:
 			if after.name == self.bot.NAME and after.voice.voice_channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
-				await self.updateDB(after.server, after.voice.voice_channel)
+				await self.updateDB(after.server.id, after.voice.voice_channel)
 				return
 		except:
 			print('Error adding ourselves to db or something weird')
 		server = before.server
 		voiceBefore = before.voice.voice_channel
 		voiceAfter = after.voice.voice_channel
-		if (server not in self.DO_ANNOUNCEMENTS or server not in self.VOICE_CHANNELS):
+		if (server.id not in self.VOICE_CHANNELS):
 			return
-		if voiceBefore is not self.VOICE_CHANNELS[server].channel and voiceAfter is self.VOICE_CHANNELS[server].channel:
-			print(before.name,'has joined the channel')
+		if voiceBefore is not self.VOICE_CHANNELS[server.id].channel and voiceAfter is self.VOICE_CHANNELS[server.id].channel:
+			print(before.name, 'has joined the channel')
 			tts = { }
 			print(before.nick, before.name)
 			tts["name"] = before.nick or before.name
@@ -102,13 +101,13 @@ class Announce():
 			tts["server"] = server
 			await self.queue.put(tts)
 			return
-		if voiceBefore is self.VOICE_CHANNELS[server].channel and voiceAfter is not self.VOICE_CHANNELS[server].channel:
+		if voiceBefore is self.VOICE_CHANNELS[server.id].channel and voiceAfter is not self.VOICE_CHANNELS[server.id].channel:
 			tts = { }
 			tts["name"] = before.nick or before.name
 			tts["action"] = 'Leave'
-			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(after) + ' has left.'
+			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(after) + " has left."
 			tts["server"] = server
-			print(after.name,'has left the channel')
+			print(after.name, 'has left the channel')
 			await self.queue.put(tts)
 			return
 		return
@@ -118,7 +117,7 @@ class Announce():
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "DELETE FROM `voice_status` WHERE `server`=%s"
-				cursor.execute(sql, (server.id))
+				cursor.execute(sql, (server))
 				connection.commit()
 		except:
 			print('Error removing from db or something')
@@ -131,49 +130,43 @@ class Announce():
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "INSERT INTO `voice_status` (`server`, `channel`) VALUES(%s, %s)"
-				cursor.execute(sql, (server.id, channel.id))
+				cursor.execute(sql, (server, channel.id))
 				connection.commit()
 		except:
 			print('Error adding to db or something')
 		finally:
 			connection.close()
 
-	async def joinVoiceChannel(self, server, channel):
-		print(server, channel)
-		if server not in self.DO_ANNOUNCEMENTS: # Added to prevent duplicates when on_ready fires multiple times
-			self.DO_ANNOUNCEMENTS.append(server)
+	async def joinVoiceChannel(self, serverID, channel):
+		print(serverID, channel)
 		voice = await self.bot.join_voice_channel(channel)
-		self.VOICE_CHANNELS[server] = voice
-		await self.updateDB(server, channel)
+		self.VOICE_CHANNELS[serverID] = voice
+		await self.updateDB(serverID, channel)
 
-	async def leaveVoiceChannel(self, server, channel):
+	async def leaveVoiceChannel(self, serverID, channel):
 		try:
-			await self.VOICE_CHANNELS[server].disconnect()
+			await self.VOICE_CHANNELS[serverID].disconnect()
 		except:
 			print("ERROR: Failed to disconnect from voice in leaveVoiceChannel()")
 		try:
-			self.DO_ANNOUNCEMENTS.remove(server)
-		except:
-			print("ERROR: Failed to remove server from DO_ANNOUNCEMENTS in leaveVoiceChannel()")
-		try:
-			del self.VOICE_CHANNELS[server]
+			del self.VOICE_CHANNELS[serverID]
 		except:
 			print("ERROR: Failed to remove server from VOICE_CHANNELS in leaveVoiceChannel()")
 
-		await self.removeFromDB(server, channel)
+		await self.removeFromDB(serverID, channel)
 
 	async def joinOrMove(self, ctx):
 		channel = ctx.message.author.voice.voice_channel
-		server = ctx.message.author.server
+		serverID = ctx.message.author.server.id
  
-		if server in self.VOICE_CHANNELS:
-			if self.VOICE_CHANNELS[server].channel is channel or channel is None:
-				await self.leaveVoiceChannel(server, channel)
+		if serverID in self.VOICE_CHANNELS:
+			if self.VOICE_CHANNELS[serverID].channel is channel or channel is None:
+				await self.leaveVoiceChannel(serverID, channel)
 			else:
-				await self.VOICE_CHANNELS[server].move_to(channel)
-				await self.updateDB(server, channel)
+				await self.VOICE_CHANNELS[serverID].move_to(channel)
+				await self.updateDB(serverID, channel)
 		elif channel:
-			await self.joinVoiceChannel(server, channel)
+			await self.joinVoiceChannel(serverID, channel)
 		else:
 			await self.bot.send_message(ctx.message.channel, "I couldn't figure out which voice channel you were in.")
 
@@ -190,7 +183,8 @@ class Announce():
 					server = self.bot.get_server(result['server'])
 					channel = self.bot.get_channel(result['channel'])
 					if server and channel:
-						await self.joinVoiceChannel(server, channel)
+						print(server.id, channel)
+						await self.joinVoiceChannel(server.id, channel)
 		except:
 			print("on_ready() unable to connect to db")
 		finally:
@@ -222,10 +216,10 @@ class Announce():
 	async def forcereconnect(self, ctx):
 		"""Bot attempts to leave and rejoin channel"""
 		await self.bot.send_message(ctx.message.channel, 'I will attempt to disconnect and rejoin the voice channel, this may not work.')
-		if ctx.message.author.server in self.VOICE_CHANNELS:
-			server = self.VOICE_CHANNELS[ctx.message.author.server]
+		if ctx.message.author.server.id in self.VOICE_CHANNELS:
+			server = self.VOICE_CHANNELS[ctx.message.author.server.id]
 			try:
-				await self.leaveVoiceChannel(ctx.message.author.server, server.channel) 
+				await self.leaveVoiceChannel(ctx.message.author.server.id, server.channel) 
 			except:
 				print("ERROR: Unable to leave voice channel in forcereconnect()")
 			try:
@@ -239,24 +233,23 @@ class Announce():
 		message = BoxIt()
 		message.setTitle('Voice Channels - Announce')
 		for server, client in self.VOICE_CHANNELS.items():
-			message.addRow( [ client.server, client.channel, client.is_connected() ] )
-			print(server, client.server, client.channel, client.is_connected())
+			message.addRow( [ client.server, client.server.id, client.channel, client.channel.id, client.is_connected() ] )
+			print(server, client.server, client.server.id, client.channel, client.channel.id, client.is_connected())
 		
 		message2 = BoxIt()
 		message2.setTitle('Voice Channels - Actual')
 		for key in self.bot.voice_clients:
-			message2.addRow( [ key.server, key.channel, key.is_connected() ] )
-			print(key, key.server, key.channel, key.is_connected())
+			message2.addRow( [ key.server, key.server.id, key.channel, key.channel.id, key.is_connected() ] )
+			print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
 		
 		
 		
-		message.setHeader( [ 'Server', 'Channel', 'Connected' ] )
-		message2.setHeader( [ 'Server', 'Channel', 'Connected' ] )
+		message.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
+		message2.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
 		
 		await self.bot.send_message(ctx.message.channel, '```' + message.box() + '```')
 		await self.bot.send_message(ctx.message.channel, '```' + message2.box() + '```')
-		await self.bot.send_message(ctx.message.channel, 'I have been asked to announce for the following servers: ' + ', '.join(str(server) for server in self.DO_ANNOUNCEMENTS))
-		await self.bot.send_message(ctx.message.channel, 'There should be no discrepancy between the three previous statements')
+		await self.bot.send_message(ctx.message.channel, 'There should be no discrepancy between the previous two statements')
 
 def setup(bot):
 	bot.add_cog(Announce(bot))
