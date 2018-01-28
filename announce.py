@@ -30,7 +30,7 @@ class Announce():
 			newName = None
 		else:
 			newName = name + ' - ' + action
-			
+
 		try:
 			await self.bot.change_nickname(server.me, newName)
 		except:
@@ -39,27 +39,25 @@ class Announce():
 	async def playTTS(self):
 		while True:
 			self.control.clear()
-			ttsThing = await self.queue.get()
-			print(ttsThing["server"])
-			if ttsThing["server"].id in self.VOICE_CHANNELS:
-				#await self.checkIfConnected(ttsThing["server"])
-				server = ttsThing["server"]
-				if ttsThing["action"]:
-					await self.updateNickname(ttsThing["server"], ttsThing["name"], ttsThing["action"])
-				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, ttsThing["message"]])
+			tts = await self.queue.get()
+			print(tts["server"])
+			if tts["server"].id in self.VOICE_CHANNELS:
+				server = tts["server"]
+				if tts["action"]:
+					await self.updateNickname(tts["server"], tts["name"], tts["action"])
+				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, tts["message"]])
 				(output, err) = process.communicate()
 				exit_code = process.wait()
  
 				player = self.VOICE_CHANNELS[server.id].create_ffmpeg_player("./calibot.wav", after=self.control.set)
 				player.start()
-				self.VOICE_CHANNELS[server.id].player = player
+				#self.VOICE_CHANNELS[server.id].player = player
 				await self.control.wait()
-				await self.updateNickname(ttsThing["server"], None)
+				await self.updateNickname(tts["server"], None)
 			else:
 				print("I was asked to announce for something that is not or no longer in self.VOICE_CHANNELS")
 
 	async def fetchPhoneticName(self, member):
-		
 		try:
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -82,7 +80,7 @@ class Announce():
 	async def on_voice_state_update(self, before, after):
 		try:
 			if after.name == self.bot.NAME and after.voice.voice_channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
-				await self.updateDB(after.server.id, after.voice.voice_channel)
+				await self.updateDB(after.server.id, after.voice.voice_channel.id)
 				return
 		except:
 			print('Error adding ourselves to db or something weird')
@@ -94,7 +92,6 @@ class Announce():
 		if voiceBefore is not self.VOICE_CHANNELS[server.id].channel and voiceAfter is self.VOICE_CHANNELS[server.id].channel:
 			print(before.name, 'has joined the channel')
 			tts = { }
-			print(before.nick, before.name)
 			tts["name"] = before.nick or before.name
 			tts["action"] = 'Join'
 			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(before) + " has joined."
@@ -112,25 +109,25 @@ class Announce():
 			return
 		return
 
-	async def removeFromDB(self, server, channel):
+	async def removeFromDB(self, serverID, channelID):
 		try:
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "DELETE FROM `voice_status` WHERE `server`=%s"
-				cursor.execute(sql, (server))
+				cursor.execute(sql, (serverID))
 				connection.commit()
 		except:
 			print('Error removing from db or something')
 		finally:
 			connection.close()
 
-	async def updateDB(self, server, channel):
-		await self.removeFromDB(server, channel)
+	async def updateDB(self, serverID, channelID):
+		await self.removeFromDB(serverID, channelID)
 		try:
 			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "INSERT INTO `voice_status` (`server`, `channel`) VALUES(%s, %s)"
-				cursor.execute(sql, (server, channel.id))
+				cursor.execute(sql, (serverID, channelID))
 				connection.commit()
 		except:
 			print('Error adding to db or something')
@@ -141,7 +138,9 @@ class Announce():
 		print(serverID, channel)
 		voice = await self.bot.join_voice_channel(channel)
 		self.VOICE_CHANNELS[serverID] = voice
-		await self.updateDB(serverID, channel)
+		await self.updateDB(serverID, channel.id)
+		
+		return voice
 
 	async def leaveVoiceChannel(self, serverID, channel):
 		try:
@@ -164,7 +163,7 @@ class Announce():
 				await self.leaveVoiceChannel(serverID, channel)
 			else:
 				await self.VOICE_CHANNELS[serverID].move_to(channel)
-				await self.updateDB(serverID, channel)
+				await self.updateDB(serverID, channel.id)
 		elif channel:
 			await self.joinVoiceChannel(serverID, channel)
 		else:
@@ -223,7 +222,7 @@ class Announce():
 			except:
 				print("ERROR: Unable to leave voice channel in forcereconnect()")
 			try:
-				await self.joinVoiceChannel(ctx.message.author.server, server.channel)
+				await self.joinVoiceChannel(ctx.message.author.server.id, server.channel)
 			except:
 				print("ERROR: Failed to join voice channel in forcereconnect()")
 
