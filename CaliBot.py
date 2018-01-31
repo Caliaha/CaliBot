@@ -31,5 +31,5 @@ if __name__ == "__main__":
 	bot.load_extension('tf2')
 	bot.load_extension('announce')
 	bot.load_extension('settings')
-	#bot.load_extension('wynncraft')
+	bot.load_extension('wowtoken')
 	bot.run(config.DISCORD_TOKEN_TEST)
