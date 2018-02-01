@@ -101,10 +101,16 @@ def doThumbs():
 			self = args[0]
 			ctx = args[1]
 			if (await func(*args, **kwargs)):
-				await self.bot.add_reaction(ctx.message, "\U0001F44D") # ThumbsUp
+				try:
+					await self.bot.add_reaction(ctx.message, "\U0001F44D") # ThumbsUp
+				except:
+					print("Couldn't add Thumbs Up reaction")
 				return True
 			else:
-				await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
+				try:
+					await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
+				except:
+					print("Couldn't add Thumbs Down reaction")
 				return False
 		return wrapper
 	return decorator
