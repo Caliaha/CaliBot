@@ -4,7 +4,7 @@ from discord.ext import commands
 import json
 import pymysql.cursors
 import re
-from stuff import BoxIt, no_pm, superuser
+from stuff import BoxIt, doThumbs, no_pm, superuser
 import time
 import urllib.parse
 import urllib.request
@@ -452,6 +452,7 @@ class WoW():
 			return False
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def wowtoken(self, ctx):
 		"""Show current wow token price"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -460,16 +461,20 @@ class WoW():
 			tokenjson = urllib.request.urlopen('https://data.wowtoken.info/snapshot.json').read().decode('utf-8')
 		except:
 			await self.bot.send_message(ctx.message.channel, 'Couldn\'t access wowtoken.info')
-			await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
-			return
+			return False
 		tokenmatch = tokenpattern.match(tokenjson)
 		if tokenmatch is not None:
-			await self.bot.send_message(ctx.message.channel, 'The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))))
+			embed=discord.Embed(title='WoW Token', description='The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))), url='https://wowtoken.info', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+			embed.set_thumbnail(url='https://i.imgur.com/Mm5Ywjn.png')
 			print('!wowtoken -> {:,}'.format(int(tokenmatch.group(2))))
-			await self.bot.add_reaction(ctx.message, "\U0001F44D") # ThumbsUp
+			try:
+				await self.bot.send_message(ctx.message.channel, embed=embed)
+			except:
+				await self.bot.send_message(ctx.message.channel, 'The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))))
+			return True
 		else:
 			await self.bot.send_message(ctx.message.channel, 'Failed to parse out wowtoken pricing information')
-			await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
+			return False
 
 	@commands.command(pass_context=True)
 	@superuser()
