@@ -110,9 +110,10 @@ class WoW():
 
 	async def fetchWebpage(self, url):
 		attempts = 0
+		headers = { 'User-Agent' : self.bot.USER_AGENT }
 		while attempts < 5:
 			try:
-				async with aiohttp.get(url) as r:
+				async with aiohttp.get(url, headers=headers) as r:
 					if r.status == 200:
 						return await r.text()
 					elif r.status == 404:
@@ -208,6 +209,93 @@ class WoW():
 				await self.bot.send_message(ctx.message.channel, ctx.message.author.name + '\'s main has been set to **' + character + '** on **' + realm + '**')
 		finally:
 			connection.close()
+
+	@commands.command(pass_context=True)
+	async def mythic(self, ctx, *args):
+		"""Shows raider.io mythic+ scores for a guild"""
+		try:
+			guild = args[0]
+		except:
+			guild = "Clan Destined"
+		try:
+			realm = args[1]
+		except:
+			realm = "Perenolde"
+
+		if (len(args) == 0 and ctx.message.server is not None):
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			try:
+				with connection.cursor() as cursor:
+					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
+					cursor.execute(sql, (ctx.message.server.id))
+					result = cursor.fetchone()
+					print(result)
+					if result is not None:
+						guild = result["guild"]
+						realm = result["realm"]
+						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+			finally:
+				connection.close()
+
+		await self.bot.send_typing(ctx.message.channel)
+
+		try:
+			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
+			rawJSON = await self.fetchWebpage('https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
+		except:
+			await self.bot.send_message(ctx.message.channel, 'Error searching for guild\nUsage: !mythic "guild" "realm"')
+			return False
+
+		guilds = json.loads(rawJSON)
+
+		try:
+			for guildJSON in guilds['matches']:
+				#print(guildJSON['data']['realm']['name'])
+				#print(guildJSON['data']['name'])
+				if guildJSON['type'] == 'guild' and guildJSON['data']['realm']['name'].lower() == realm.lower() and guildJSON['data']['name'].lower() == guild.lower():
+					guild = guildJSON['data']['name']
+					realm = guildJSON['data']['realm']['slug']
+					print("Found guild")
+		except:
+			print('Unable to find guild')
+
+		try:
+			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
+			print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
+			rawJSON = await self.fetchWebpage('https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
+		except:
+			await self.bot.send_message(ctx.message.channel, 'Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
+			return False
+
+		try:
+			roster = json.loads(rawJSON)
+		except:
+			print("Failed to parse JSON data")
+			await self.bot.send_message(ctx.message.channel, 'Error parsing JSON for that guild')
+			return False
+		
+		box = BoxIt()
+		box.setTitle('Mythic+ Scores for ' + guild)
+		for character in roster['guildRoster']['roster']:
+			#print(character['character']['name'], character['character']['items']['item_level_equipped'], character['character']['items']['item_level_total'])
+			if 'keystoneScores' in character and 'allScore' in character['keystoneScores']:
+				if (int(character['keystoneScores']['allScore']) > 0):
+					box.addRow( [ character['character']['name'], str(character['character']['items']['item_level_equipped']), int(character['keystoneScores']['allScore']) ] )
+
+		box.sort(2, True)
+		box.setHeader( ['Name', 'Item Level', 'Mythic+ Score' ] ) # FIX ME Shouldn't have to put header after the sort
+		message = '```' + box.box()
+
+		if message:
+			lines = message.splitlines(True)
+			newMessage = ''
+			for line in lines:
+				if len(newMessage + line) > 1995:
+					await self.bot.send_message(ctx.message.channel, newMessage + '```')
+					newMessage = '```'
+				newMessage += line
+			if newMessage != '':
+				await self.bot.send_message(ctx.message.channel, newMessage + '```')
 
 	@commands.command(pass_context=True)
 	async def wp(self, ctx, *, toon = '*'):
