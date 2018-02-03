@@ -126,6 +126,24 @@ class WoW():
 				attempts += 1
 		raise ValueError('Unable to fetch url')
 
+	async def postWebdata(self, url, data):
+		attempts = 0
+		headers = { 'User-Agent' : self.bot.USER_AGENT }
+		while attempts < 5:
+			try:
+				async with aiohttp.post(url, headers=headers, data=data) as r:
+					if r.status == 200:
+						return await r.text()
+					elif r.status == 404:
+						print("Page was 404")
+						return False
+					else:
+						raise
+			except:
+				print("Failed to grab webpage", url, attempts)
+				attempts += 1
+		raise ValueError('Unable to fetch url')
+
 	@commands.command(pass_context=True, description='Show weekly mythic+ affixes as shown on wowhead.com')
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
@@ -296,6 +314,12 @@ class WoW():
 				newMessage += line
 			if newMessage != '':
 				await self.bot.send_message(ctx.message.channel, newMessage + '```')
+		
+		try:
+			data = { 'realmId': roster['guildRoster']['guild']['realm']['id'], 'realm': roster['guildRoster']['guild']['realm']['name'], 'region': roster['guildRoster']['guild']['region']['slug'], 'guild': roster['guildRoster']['guild']['name'], 'numMembers': 0 }
+			page = await self.postWebdata('https://raider.io/api/crawler/guilds', data)
+		except:
+			print("Failed to request raider.io guild update")
 
 	@commands.command(pass_context=True)
 	async def wp(self, ctx, *, toon = '*'):
