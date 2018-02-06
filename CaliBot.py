@@ -32,4 +32,5 @@ if __name__ == "__main__":
 	bot.load_extension('announce')
 	bot.load_extension('settings')
 	bot.load_extension('wowtoken')
+	bot.load_extension('hots')
 	bot.run(config.DISCORD_TOKEN_TEST)
