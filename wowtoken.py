@@ -2,33 +2,17 @@ import aiohttp
 import asyncio
 import discord
 import re
+from stuff import fetchWebpage
 
 class WoWToken():
 	def __init__(self, bot):
 		self.bot = bot
 		self.bot.loop.create_task(self.background_lookup())
 
-	async def fetchWebpage(self, url):
-		attempts = 0
-		while attempts < 5:
-			try:
-				async with aiohttp.get(url) as r:
-					if r.status == 200:
-						return await r.text()
-					elif r.status == 404:
-						print("Page was 404")
-						return False
-					else:
-						raise
-			except:
-				print("Failed to grab webpage", url, attempts)
-				attempts += 1
-		raise ValueError('Unable to fetch url')
-
 	async def fetchWoWTokenGoldCost(self):
 		tokenpattern = re.compile('\{"NA":\{"timestamp":(.*?)."raw":\{"buy":(.*?)."24min":(.*?),"24max":(.*?)."timeToSell":')
 		try:
-			tokenjson = await self.fetchWebpage('https://data.wowtoken.info/snapshot.json')
+			tokenjson = await fetchWebpage(self, 'https://data.wowtoken.info/snapshot.json')
 		except:
 			return False
 		tokenmatch = tokenpattern.match(tokenjson)
