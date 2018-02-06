@@ -422,7 +422,7 @@ class WoW():
 					if RankingMetric not in characterData[difficulty]:
 						characterData[difficulty][RankingMetric] = { }
 
-					characterData[difficulty][RankingMetric] = { 'best': float(statData[2]), 'median': float(statData[4]), 'kills': int(statData[5]), 'allstar': float(statData[6]), 'allstartotal': float(statData[7].replace(',', '') ) }
+					characterData[difficulty][RankingMetric] = { 'best': float(statData[2]), 'median': float(statData[4]), 'kills': int(statData[5]), 'allstar': float(statData[6].replace(',', '')), 'allstartotal': float(statData[7].replace(',', '') ) }
 		if didStuff:
 			return characterData
 		else:
