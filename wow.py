@@ -4,7 +4,7 @@ from discord.ext import commands
 import json
 import pymysql.cursors
 import re
-from stuff import BoxIt, doThumbs, no_pm, superuser
+from stuff import BoxIt, doThumbs, no_pm, superuser, fetchWebpage, postWebdata
 import time
 import urllib.parse
 import urllib.request
@@ -108,48 +108,12 @@ class WoW():
 		
 		return urllib.parse.quote_plus(characterName[1]), urllib.parse.quote_plus(realm.replace(" ","-"))
 
-	async def fetchWebpage(self, url):
-		attempts = 0
-		headers = { 'User-Agent' : self.bot.USER_AGENT }
-		while attempts < 5:
-			try:
-				async with aiohttp.get(url, headers=headers) as r:
-					if r.status == 200:
-						return await r.text()
-					elif r.status == 404:
-						print("Page was 404")
-						return False
-					else:
-						raise
-			except:
-				print("Failed to grab webpage", url, attempts)
-				attempts += 1
-		raise ValueError('Unable to fetch url')
-
-	async def postWebdata(self, url, data):
-		attempts = 0
-		headers = { 'User-Agent' : self.bot.USER_AGENT }
-		while attempts < 5:
-			try:
-				async with aiohttp.post(url, headers=headers, data=data) as r:
-					if r.status == 200:
-						return await r.text()
-					elif r.status == 404:
-						print("Page was 404")
-						return False
-					else:
-						raise
-			except:
-				print("Failed to grab webpage", url, attempts)
-				attempts += 1
-		raise ValueError('Unable to fetch url')
-
 	@commands.command(pass_context=True, description='Show weekly mythic+ affixes as shown on wowhead.com')
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
 		await self.bot.send_typing(ctx.message.channel)
  
-		wowheadData = await self.fetchWebpage('https://www.wowhead.com')
+		wowheadData = await fetchWebpage(self, 'https://www.wowhead.com')
 		if wowheadData is False:
 			print("Couldn't access wowhead.com")
 			await self.bot.send_message(ctx.message.channel, 'I was unable to access wowhead.com')
@@ -176,7 +140,7 @@ class WoW():
 		succeded = 0
 		for affix in affixes:
 			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)<h2 class')
-			wowheadAffixData = await self.fetchWebpage('https://www.wowhead.com' + affix)
+			wowheadAffixData = await fetchWebpage(self, 'https://www.wowhead.com' + affix)
 			if wowheadAffixData is not False:
 				affixDesc = affixDescP.search(wowheadAffixData)
 				if affixDesc is not None:
@@ -251,7 +215,7 @@ class WoW():
 					if result is not None:
 						guild = result["guild"]
 						realm = result["realm"]
-						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name + '\nLately some pages have been failing to load, so it may take me slightly longer as I make extra attempts to fetch the web page')
 			finally:
 				connection.close()
 
@@ -259,7 +223,7 @@ class WoW():
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
-			rawJSON = await self.fetchWebpage('https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
+			rawJSON = await fetchWebpage(self, 'https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
 		except:
 			await self.bot.send_message(ctx.message.channel, 'Error searching for guild\nUsage: !mythic "guild" "realm"')
 			return False
@@ -280,7 +244,7 @@ class WoW():
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
-			rawJSON = await self.fetchWebpage('https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
+			rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await self.bot.send_message(ctx.message.channel, 'Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
 			return False
@@ -303,6 +267,8 @@ class WoW():
 		box.sort(2, True)
 		box.setHeader( ['Name', 'Item Level', 'Mythic+ Score' ] ) # FIX ME Shouldn't have to put header after the sort
 		message = '```' + box.box()
+		
+		#embed=discord.Embed(title='Mythic+', description='SOmething', url='https://raider.io/guilds/us/' +  urllib.parse.quote(realm) + '/' + urllib.parse.quote(guild) + '/roster#mode=mythic_plus', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))) Maybe for later
 
 		if message:
 			lines = message.splitlines(True)
@@ -310,14 +276,18 @@ class WoW():
 			for line in lines:
 				if len(newMessage + line) > 1995:
 					await self.bot.send_message(ctx.message.channel, newMessage + '```')
+					#embed.add_field(name='-', value=newMessage + '```', inline=False)
 					newMessage = '```'
 				newMessage += line
 			if newMessage != '':
 				await self.bot.send_message(ctx.message.channel, newMessage + '```')
+				#embed.add_field(name='-', value=newMessage + '```', inline=False)
+		#await self.bot.send_message(ctx.message.channel, embed=embed)
 		
 		try:
 			data = { 'realmId': roster['guildRoster']['guild']['realm']['id'], 'realm': roster['guildRoster']['guild']['realm']['name'], 'region': roster['guildRoster']['guild']['region']['slug'], 'guild': roster['guildRoster']['guild']['name'], 'numMembers': 0 }
-			page = await self.postWebdata('https://raider.io/api/crawler/guilds', data)
+			page = await postWebdata(self, 'https://raider.io/api/crawler/guilds', data)
+			print("Done requesting update from raider.io")
 		except:
 			print("Failed to request raider.io guild update")
 
@@ -331,7 +301,7 @@ class WoW():
 			return False
  
 		try:
-			wowprogressData = await self.fetchWebpage('https://www.wowprogress.com/character/us/' + realm + '/' + character)
+			wowprogressData = await fetchWebpage(self, 'https://www.wowprogress.com/character/us/' + realm + '/' + character)
 		except:
 			await self.bot.send_message(ctx.message.channel, 'Wowprogress data not found')
 			print("Couldn't find wowprogress data for", character, realm)
@@ -407,7 +377,7 @@ class WoW():
 	async def getIndividualPerformance(self, characterID, type, zone, difficulty):
 		try:
 			url = 'https://www.warcraftlogs.com/rankings/character_rankings_for_zone/' + characterID + '/' + zone + '/0/' + type + '/0/1/?keystone=0'
-			characterPage = await self.fetchWebpage(url)
+			characterPage = await fetchWebpage(self, url)
 			characterPerfPattern = re.compile('<div class="stats" id="stats-10-' + difficulty + '-.*?">\nBest Perf\. Avg<br>\n<b style="font-size:32px" class=".*?">(.*?)</b>.*?>Median Perf\. Avg:<.*?>\n(.*?)<tr>.*?>(\d+)', re.DOTALL)
 			characterPerfData = characterPerfPattern.search(characterPage)
 			return characterPerfData[1], characterPerfData[2], characterPerfData[3]
@@ -417,7 +387,7 @@ class WoW():
 	# Most of this stuff was copy/pasted from the !logs command FIXME
 	async def getCharacterLog(self, characterID, selectedRankingZone = '17'):
 		try:
-			await self.fetchWebpage('https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID)
+			await fetchWebpage(self, 'https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID)
 		except:
 			print("Failed to update character")
 
@@ -428,7 +398,7 @@ class WoW():
 		didStuff = False
 		for RankingMetric in RankingMetrics:
 			try:
-				statsDataPage = await self.fetchWebpage('https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID + '/' + selectedRankingZone + '/' + RankingMetric)
+				statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID + '/' + selectedRankingZone + '/' + RankingMetric)
 			except:
 				print("Exception while accessing statsDataPage")
 				return False
@@ -470,7 +440,7 @@ class WoW():
 		characterIDPattern = re.compile('var characterID = (\d+);')
  
 		try:
-			characterIDPage = await self.fetchWebpage('https://www.warcraftlogs.com/character/us/' + realm + '/' + character)
+			characterIDPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/character/us/' + realm + '/' + character)
 		except:
 			print("Exception while accessing character Id page")
 			await self.bot.send_message(ctx.message.channel, 'An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
@@ -481,7 +451,7 @@ class WoW():
 			return False
   
 		try:
-			await self.fetchWebpage('https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID[1])
+			await fetchWebpage(self, 'https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID[1])
 		except:
 			print('Failed to request warcraftlogs update for ' + character + '-' + realm)
 
@@ -516,7 +486,7 @@ class WoW():
 			warcraftLogsMessage += '**\n'
 		for RankingMetric in RankingMetrics:
 			try:
-				statsDataPage = await self.fetchWebpage('https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID[1] + '/' + selectedRankingZone + '/' + RankingMetric)
+				statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID[1] + '/' + selectedRankingZone + '/' + RankingMetric)
 			except:
 				print("Exception while accessing statsDataPage")
 				await self.bot.send_message(ctx.message.channel, 'An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
@@ -644,7 +614,7 @@ class WoW():
 
 	async def fetchWarcraftLogsAttendance(self, guildID, zoneID):
 		try:
-			attendancePage = await self.fetchWebpage('https://www.warcraftlogs.com/guilds/attendance_table/' + guildID + '/0/' + zoneID)
+			attendancePage = await fetchWebpage(self, 'https://www.warcraftlogs.com/guilds/attendance_table/' + guildID + '/0/' + zoneID)
 		except:
 			return None
 
@@ -723,7 +693,7 @@ class WoW():
 		print(guild, realm)
 		
 		try:
-			guildList = await self.fetchWebpage("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 		except urllib.error.HTTPError as e:
 			print(e.reason)
@@ -746,7 +716,7 @@ class WoW():
 		print("GuildID: ", guildID)
 		
 		try:
-			guildRoster = await self.fetchWebpage('https://www.warcraftlogs.com/guilds/characters/' + guildID)
+			guildRoster = await fetchWebpage(self, 'https://www.warcraftlogs.com/guilds/characters/' + guildID)
 		except:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to fetch the guild roster')
 		
@@ -854,7 +824,7 @@ class WoW():
 		print(guild, realm)
 		
 		try:
-			guildList = await self.fetchWebpage("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 		except:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
@@ -875,7 +845,7 @@ class WoW():
 			return False
 		print("GuildID: ", guildID)
 		try:
-			guildRankings = await self.fetchWebpage("https://www.warcraftlogs.com/rankings/guild/" + guildID + "/latest/")
+			guildRankings = await fetchWebpage(self, "https://www.warcraftlogs.com/rankings/guild/" + guildID + "/latest/")
 			serverMatchPattern = re.compile('var filterServer = (\d+);')
 			serverMatch = serverMatchPattern.search(guildRankings)
 			print(serverMatch)
@@ -909,7 +879,7 @@ class WoW():
 			box.setTitle(url)
 			#box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 			try:
-				guildData = await self.fetchWebpage(urls[url])
+				guildData = await fetchWebpage(self, urls[url])
 				totalRequests += 1
 				try:
 					await self.bot.edit_message(updatableMessage, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests))
@@ -968,7 +938,7 @@ class WoW():
 		try:
 			
 			url = 'https://us.api.battle.net/wow/item/' + str(itemID) + '?bl=' + ','.join(str(bonus) for bonus in bonusList) + '&locale=en_US&apikey=' + self.bot.APIKEY_WOW
-			itemJSON = json.loads(await self.fetchWebpage(url))
+			itemJSON = json.loads(await fetchWebpage(self, url))
 		except:
 			#print(e.reason)
 			#print('Failure to load item socket data')
@@ -992,7 +962,7 @@ class WoW():
 		gearSlots = [ 'head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2', 'mainHand', 'offHand' ] # Left out shirt, tabard
 
 		try:
-			itemsJSON = await self.fetchWebpage('https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=items,guild&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
+			itemsJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=items,guild&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
 		except:
 			await self.bot.send_message(ctx.message.channel, "Unable to access character data, check for typos or invalid realm or the Battle.net API is down")
 			return False
@@ -1138,7 +1108,7 @@ class WoW():
 			return False
 		 
 		try:
-			characterJSON = await self.fetchWebpage('https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=guild,progression,items,achievements&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
+			characterJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=guild,progression,items,achievements&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
 			if (characterJSON == "{}"):
 				await self.bot.send_message(ctx.message.channel, 'Empty JSON Data, this character probably doesn\'t exist or something.')
 				return False
