@@ -1,4 +1,6 @@
-﻿from functools import wraps
+﻿import aiohttp
+import async_timeout
+from functools import wraps
 import pymysql.cursors
 import re
 
@@ -288,3 +290,41 @@ class BoxIt():
 			for jndex, item in enumerate(row):
 				thing += item
 		return thing
+
+async def fetchWebpage(self, url):
+	attempts = 0
+	headers = { 'User-Agent' : self.bot.USER_AGENT }
+	while attempts < 15:
+		try:
+			with async_timeout.timeout(15):
+				async with aiohttp.get(url, headers=headers) as r:
+					if r.status == 200:
+						return await r.text()
+					elif r.status == 404:
+						print("Page was 404")
+						return False
+					else:
+						raise
+		except:
+			print("Failed to grab webpage", url, attempts)
+			attempts += 1
+	raise ValueError('Unable to fetch url')
+
+async def postWebdata(self, url, data):
+	attempts = 0
+	headers = { 'User-Agent' : self.bot.USER_AGENT }
+	while attempts < 15:
+		try:
+			with async_timeout.timeout(15):
+				async with aiohttp.post(url, headers=headers, data=data) as r:
+					if r.status == 200:
+						return True
+					elif r.status == 404:
+						print("Page was 404")
+						return False
+					else:
+						raise
+		except:
+			print("Failed to grab webpage", url, attempts)
+			attempts += 1
+	raise ValueError('Unable to fetch url')
