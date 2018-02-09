@@ -110,6 +110,7 @@ class WoW():
 		return urllib.parse.quote_plus(characterName[1]), urllib.parse.quote_plus(realm.replace(" ","-"))
 
 	@commands.command(pass_context=True, description='Show weekly mythic+ affixes as shown on wowhead.com')
+	@doThumbs()
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -206,19 +207,7 @@ class WoW():
 			realm = "Perenolde"
 
 		if (len(args) == 0 and ctx.message.server is not None):
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			try:
-				with connection.cursor() as cursor:
-					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-					cursor.execute(sql, (ctx.message.server.id))
-					result = cursor.fetchone()
-					print(result)
-					if result is not None:
-						guild = result["guild"]
-						realm = result["realm"]
-						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name + '\nLately some pages have been failing to load, so it may take me slightly longer as I make extra attempts to fetch the web page')
-			finally:
-				connection.close()
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
 		await self.bot.send_typing(ctx.message.channel)
 
@@ -293,6 +282,7 @@ class WoW():
 			print("Failed to request raider.io guild update")
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def wp(self, ctx, *, toon = '*'):
 		"""Mythic+ completion rates as shown on wowprogress.com"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -430,6 +420,7 @@ class WoW():
 			return False
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def logs(self, ctx, *, toon = "*"):
 		"""Shows basic warcraft logs summary"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -631,6 +622,7 @@ class WoW():
 		return attendance
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def guildperf(self, ctx, *args):
 		"""Shows performance data for guild"""
 		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
@@ -654,19 +646,7 @@ class WoW():
 		
 		
 		if (len(args) == 0 and ctx.message.server is not None):
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			try:
-				with connection.cursor() as cursor:
-					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-					cursor.execute(sql, (ctx.message.server.id))
-					result = cursor.fetchone()
-					print(result)
-					if result is not None:
-						guild = result["guild"]
-						realm = result["realm"]
-						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
-			finally:
-				connection.close()
+			guild, realm, updateabledMessage = await self.fetchGuildFromDB(ctx)
 
 		totalRequests = 0
 		try:
@@ -770,43 +750,53 @@ class WoW():
 				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
 		if len(didStuff) == 0:
 			await self.bot.send_message(ctx.message.channel, 'No log data found for guild')
-					
+			return False
+		return True
+
+	async def fetchGuildFromDB(self, ctx):
+		try:
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
+				cursor.execute(sql, (ctx.message.server.id))
+				result = cursor.fetchone()
+				print(result)
+				if result is not None:
+					guild = result["guild"]
+					realm = result["realm"]
+					updateableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+					return guild, realm, updateableMessage
+		except:
+			print("Database lookup failed fetchGuildFromDB")
+		finally:
+			connection.close()
+
+		return None, None, None
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def linklogs(self, ctx, *args):
-		"""Shows links to the lastest warcraft logs for the guild"""
-		#This was just copied from allstars, maybe deduplicate FIX ME
+		"""Shows links to the latest warcraft logs for the guild"""
 
 		try:
 			guild = args[0]
 		except:
-			guild = "The Touch of Chaos"
+			guild = None
 		try:
 			realm = args[1]
 		except:
-			realm = "Cairne"
+			realm = None
 		
 		
 		if (len(args) == 0 and ctx.message.server is not None):
-			try:
-				connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-				with connection.cursor() as cursor:
-					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-					cursor.execute(sql, (ctx.message.server.id))
-					result = cursor.fetchone()
-					print(result)
-					if result is not None:
-						guild = result["guild"]
-						realm = result["realm"]
-						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
-			finally:
-				connection.close()
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
 		await self.bot.send_typing(ctx.message.channel)
 
 		region = "US"
 
-		print(guild, realm)
+		if (guild == None or realm == None):
+			await self.bot.say('Invalid arguments passed and no default guild  or realm set for this Discord guild\nUsage: !linklogs "Guild" "Server"')
 		
 		try:
 			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
@@ -848,7 +838,12 @@ class WoW():
 				date = 0
 			try:
 				links = tr.find_all('a')
-				reportData += '\n[' + links[0].string + '](https://www.warcraftlogs.com' + links[0].get('href') + ') -> ' + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(date))
+				try:
+					reportID = links[0].get('href').split("/reports/", 1)[1]
+				except:
+					print("Failed to find report id")
+					reportID = ''
+				reportData += '\n[' + links[0].string + '](https://www.warcraftlogs.com' + links[0].get('href') + ') > ' + time.strftime("%a, %d %b %Y", time.localtime(date)) + ' < ' + '[Analyzer](https://wowanalyzer.com/report/' + reportID + ')'
 			except:
 				reportData += '\nError parsing this log entry'
 			count = count + 1
@@ -857,6 +852,7 @@ class WoW():
 
 		embed=discord.Embed(title='Lastest log reports for <' + guild + '>', description=reportData, url='https://www.warcraftlogs.com/guilds/reportslist/' + guildID + '/', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 		embed.set_thumbnail(url='https://www.warcraftlogs.com/img/common/warcraft-logo.png')
+		embed.set_footer(text='Git Gud, Scrubs!', icon_url='https://wowanalyzer.com/favicon.png')
 
 		try:
 			await self.bot.send_message(ctx.message.channel, embed=embed)
@@ -868,6 +864,7 @@ class WoW():
 		return True
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def allstars(self, ctx, *args):
 		"""Shows guild allstars performance and realm rankings"""
 		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
@@ -885,26 +882,13 @@ class WoW():
 		
 		
 		if (len(args) == 0 and ctx.message.server is not None):
-			try:
-				connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-				with connection.cursor() as cursor:
-					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-					cursor.execute(sql, (ctx.message.server.id))
-					result = cursor.fetchone()
-					print(result)
-					if result is not None:
-						guild = result["guild"]
-						realm = result["realm"]
-						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
-			finally:
-				connection.close()
-
+			guild, realm, updateabledMessaged = await self.fetchGuildFromDB(ctx)
 
 		#try:
 		#	region = args[2]
 		#except:
 		region = "US"
-			
+
 		try:
 			difficulty = args[2]
 			if difficulty not in difficultyID:
@@ -925,7 +909,7 @@ class WoW():
 		except:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
 			return False
-		
+
 		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
 
 		print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
@@ -951,8 +935,7 @@ class WoW():
 		except:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to parse the server id for that guild, tell Cali about it')
 			return False
-		
-		#return
+
 		totalRequests = 0
 		try:
 			updatableMessage
@@ -967,7 +950,7 @@ class WoW():
 
 		message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
 		didStuff = False
-		
+
 
 		for url in urls:
 			print(urls[url])
@@ -1011,7 +994,7 @@ class WoW():
 			box.sort(6, True)
 			box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 			message += '\n' + box.box()
-		
+
 		if didStuff:
 			lines = message.splitlines(True)
 			newMessage = ''
@@ -1028,11 +1011,13 @@ class WoW():
 				await self.bot.send_message(ctx.message.channel, newMessage + '```')
 		else:
 			await self.bot.send_message(ctx.message.channel, 'I was unable to find the right data')
+			return False
+		return True
 
 	async def numSocketsGear(self, itemID, context, bonusList):
 		count = 0
 		try:
-			
+
 			url = 'https://us.api.battle.net/wow/item/' + str(itemID) + '?bl=' + ','.join(str(bonus) for bonus in bonusList) + '&locale=en_US&apikey=' + self.bot.APIKEY_WOW
 			itemJSON = json.loads(await fetchWebpage(self, url))
 		except:
@@ -1046,6 +1031,7 @@ class WoW():
 		return count
 	
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def gear(self, ctx, *, toon = '*'):
 		"""Shows current equipped gear and basic gem/enchant check"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -1194,7 +1180,9 @@ class WoW():
 			print(e)
 			await self.bot.send_message(ctx.message.channel, msg)
 		return True
+
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def armory(self, ctx, *, toon = '*'):
 		"""Shows item level and progression info"""
 		await self.bot.send_typing(ctx.message.channel)
@@ -1231,7 +1219,7 @@ class WoW():
 		 embed.set_thumbnail(url='https://render-us.worldofwarcraft.com/character/' + toon['thumbnail'] + '?' + str(time.time()))
 		 embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
 		 embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
-		 
+
 		RAIDS = [ 'Antorus, the Burning Throne', 'Tomb of Sargeras', 'The Nighthold', 'Trial of Valor', 'The Emerald Nightmare' ]
 		RAID_AOTC = { 'Antorus, the Burning Throne': 12110, 'Tomb of Sargeras': 11874, 'The Nighthold': 11195, 'Trial of Valor': 11581, 'The Emerald Nightmare': 11194 }
 		RAID_PROG = { }
