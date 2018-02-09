@@ -1,6 +1,7 @@
 ﻿import config
 import discord
 from discord.ext import commands
+from stuff import isBotOwner
 import sys
 import time
 
@@ -19,18 +20,18 @@ bot.TTS_FILE = config.TTS_FILE
 bot.DEFAULT_EMBED_COLOR = '444580'
 bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0'
 
+startup_extensions = [ 'announce', 'color', 'hots', 'permissions', 'settings', 'tf2', 'utils', 'wow', 'wowtoken' ]
+
 @bot.event
 async def on_ready():
 	print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
 
 if __name__ == "__main__":
-	bot.load_extension('utils')
-	bot.load_extension('permissions')
-	bot.load_extension('wow')
-	bot.load_extension('color')
-	bot.load_extension('tf2')
-	bot.load_extension('announce')
-	bot.load_extension('settings')
-	bot.load_extension('wowtoken')
-	bot.load_extension('hots')
+	for extension in startup_extensions:
+		try:
+			bot.load_extension(extension)
+		except Exception as e:
+			exc = '{}: {}'.format(type(e).__name__, e)
+			print('Failed to load extension {}\n{}'.format(extension, exc))
+
 	bot.run(config.DISCORD_TOKEN_TEST)
