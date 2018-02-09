@@ -1,4 +1,5 @@
 ﻿import aiohttp
+from bs4 import BeautifulSoup
 import discord
 from discord.ext import commands
 import json
@@ -770,6 +771,101 @@ class WoW():
 		if len(didStuff) == 0:
 			await self.bot.send_message(ctx.message.channel, 'No log data found for guild')
 					
+
+	@commands.command(pass_context=True)
+	async def linklogs(self, ctx, *args):
+		"""Shows links to the lastest warcraft logs for the guild"""
+		#This was just copied from allstars, maybe deduplicate FIX ME
+
+		try:
+			guild = args[0]
+		except:
+			guild = "The Touch of Chaos"
+		try:
+			realm = args[1]
+		except:
+			realm = "Cairne"
+		
+		
+		if (len(args) == 0 and ctx.message.server is not None):
+			try:
+				connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+				with connection.cursor() as cursor:
+					sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
+					cursor.execute(sql, (ctx.message.server.id))
+					result = cursor.fetchone()
+					print(result)
+					if result is not None:
+						guild = result["guild"]
+						realm = result["realm"]
+						updatableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+			finally:
+				connection.close()
+
+		await self.bot.send_typing(ctx.message.channel)
+
+		region = "US"
+
+		print(guild, realm)
+		
+		try:
+			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+		except:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
+			return False
+		
+		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
+		guildMatch = guildPattern.search(guildList)
+		if guildMatch is not None:
+				guildID = guildMatch[1]
+				guild = guildMatch[2]
+		else:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+			return False
+
+		try:
+			reportlist = await fetchWebpage(self, "https://www.warcraftlogs.com/guilds/reportslist/" + str(guildID) + "/")
+		except:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to grab the reports list for that guild or something')
+			return False
+
+		try:
+			soup = BeautifulSoup(reportlist, "html.parser")
+		except:
+			await self.bot.send_message(ctx.message.channel, 'I was unable to parse the webpage with BeautifulSoup')
+			return False
+		
+		reportTable = soup.find('table', id = 'reports-table')
+		datePattern = re.compile('var reportDate = new Date\((\d+) \* 1000\);')
+		reportData = ''
+
+		count = 0
+		for tr in reportTable.find_all('tr'):
+			dateMatch = datePattern.search(str(tr))
+			if dateMatch:
+				date = int(dateMatch[1])
+			else:
+				date = 0
+			try:
+				links = tr.find_all('a')
+				reportData += '\n[' + links[0].string + '](https://www.warcraftlogs.com' + links[0].get('href') + ') -> ' + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(date))
+			except:
+				reportData += '\nError parsing this log entry'
+			count = count + 1
+			if (count > 5):
+				break
+
+		embed=discord.Embed(title='Lastest log reports for <' + guild + '>', description=reportData, url='https://www.warcraftlogs.com/guilds/reportslist/' + guildID + '/', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.set_thumbnail(url='https://www.warcraftlogs.com/img/common/warcraft-logo.png')
+
+		try:
+			await self.bot.send_message(ctx.message.channel, embed=embed)
+			return True
+		except discord.HTTPException as e:
+			print(e)
+			await self.bot.send_message(ctx.message.channel, 'I need to be allowed to embed messages')
+			return False
+		return True
 
 	@commands.command(pass_context=True)
 	async def allstars(self, ctx, *args):
