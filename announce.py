@@ -13,16 +13,11 @@ class Announce():
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
 		self.file = '-w=' + self.bot.TTS_FILE
 
-	async def checkIfConnected(self, server):
-		print("Whoo")
-		if server in self.VOICE_CHANNELS:
-			if self.VOICE_CHANNELS[server] in self.bot.voice_clients:
-				print("I'm connected to voice")
-			else:
-				print("I'm not connected to voice but I should be")
-			pass
-		else:
-			print("checkIfConnected(), I'm not in this voice channel and this message should never trigger")
+	async def checkIfConnected(self):
+		for voice in self.bot.voice_clients:
+			if voice.server.id not in self.VOICE_CHANNELS:
+				self.VOICE_CHANNELS[voice.server.id] = voice
+				print('We appear to be in a voice channel that was not in VOICE_CHANNELS, Fixed maybe')
 
 	async def updateNickname(self, server, name, action='Error'):
 		print(server.me, name, self.bot.NAME)
@@ -87,6 +82,7 @@ class Announce():
 		server = before.server
 		voiceBefore = before.voice.voice_channel
 		voiceAfter = after.voice.voice_channel
+		await self.checkIfConnected()
 		if (server.id not in self.VOICE_CHANNELS):
 			return
 		if voiceBefore is not self.VOICE_CHANNELS[server.id].channel and voiceAfter is self.VOICE_CHANNELS[server.id].channel:
@@ -197,6 +193,7 @@ class Announce():
 	@no_pm()
 	async def announce(self, ctx):
 		"""Bot announces who joins or leaves your voice channel"""
+		await self.checkIfConnected()
 		await self.joinOrMove(ctx)
 	
 	@commands.command(pass_context=True, hidden=True)
@@ -215,6 +212,7 @@ class Announce():
 	async def forcereconnect(self, ctx):
 		"""Bot attempts to leave and rejoin channel"""
 		await self.bot.send_message(ctx.message.channel, 'I will attempt to disconnect and rejoin the voice channel, this may not work.')
+		await self.checkIfConnected()
 		if ctx.message.author.server.id in self.VOICE_CHANNELS:
 			server = self.VOICE_CHANNELS[ctx.message.author.server.id]
 			try:
