@@ -291,7 +291,7 @@ class BoxIt():
 				thing += item
 		return thing
 
-async def fetchWebpage(self, url):
+async def fetchWebpage(self, url, binary=False):
 	attempts = 0
 	headers = { 'User-Agent' : self.bot.USER_AGENT }
 	while attempts < 15:
@@ -299,7 +299,10 @@ async def fetchWebpage(self, url):
 			with async_timeout.timeout(15):
 				async with aiohttp.get(url, headers=headers) as r:
 					if r.status == 200:
-						return await r.text()
+						if binary:
+							return await r.read()
+						else:
+							return await r.text()
 					elif r.status == 404:
 						print("Page was 404")
 						return False
