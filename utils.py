@@ -60,5 +60,17 @@ class utils():
 		self.bot.unload_extension(extension_name)
 		await self.bot.say("{} unloaded.".format(extension_name))
 
+	@commands.command(pass_context=True)
+	@isBotOwner()
+	async def reload(self, ctx, extension_name : str):
+		"""Unloads and the loads an extension."""
+		self.bot.unload_extension(extension_name)
+		try:
+			self.bot.load_extension(extension_name)
+		except (AttributeError, ImportError) as e:
+			await self.bot.say("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
+			return
+		await self.bot.say("{} has been reloaded.".format(extension_name))
+
 def setup(bot):
 	bot.add_cog(utils(bot))
