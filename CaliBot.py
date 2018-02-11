@@ -11,6 +11,7 @@ bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='
 bot.startTime = time.time()
 bot.NAME = config.NAME
 bot.ADMINACCOUNT = config.ADMINACCOUNT
+bot.APIKEY_OSU = config.APIKEY_OSU
 bot.APIKEY_WOW = config.APIKEY_WOW
 bot.MYSQL_DB = config.MYSQL_DB
 bot.MYSQL_USER = config.MYSQL_USER
