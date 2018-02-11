@@ -318,7 +318,7 @@ async def postWebdata(self, url, data):
 			with async_timeout.timeout(15):
 				async with aiohttp.post(url, headers=headers, data=data) as r:
 					if r.status == 200:
-						return True
+						return await r.text()
 					elif r.status == 404:
 						print("Page was 404")
 						return False
