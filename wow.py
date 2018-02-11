@@ -1,4 +1,5 @@
 ﻿import aiohttp
+import asyncio
 from bs4 import BeautifulSoup
 import discord
 from discord.ext import commands
@@ -195,6 +196,7 @@ class WoW():
 			connection.close()
 
 	@commands.command(pass_context=True)
+	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
 		try:
@@ -219,7 +221,7 @@ class WoW():
 			return False
 
 		guilds = json.loads(rawJSON)
-
+		guildData = None
 		try:
 			for guildJSON in guilds['matches']:
 				#print(guildJSON['data']['realm']['name'])
@@ -227,9 +229,46 @@ class WoW():
 				if guildJSON['type'] == 'guild' and guildJSON['data']['realm']['name'].lower() == realm.lower() and guildJSON['data']['name'].lower() == guild.lower():
 					guild = guildJSON['data']['name']
 					realm = guildJSON['data']['realm']['slug']
+					guildData = guildJSON
 					print("Found guild")
 		except:
 			print('Unable to find guild')
+			await self.bot.say('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			return False
+		
+		if guildData is None:
+			print('Unable to find guild')
+			await self.bot.say('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			return False
+
+		try:
+			updateableMessage
+		except:
+			updateableMessage = await self.bot.send_message(ctx.message.channel, 'Performing lookup for <' + guild + '> on ' + realm)
+
+		try:
+			await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nStatus: Unknown Currently Processing: 0/0')
+
+			data = { 'realmId': guildData['data']['realm']['id'], 'realm': guildData['data']['realm']['name'], 'region': guildData['data']['region']['slug'], 'guild': guildData['data']['name'], 'numMembers': 50 }
+
+			postJSON = json.loads(await postWebdata(self, 'https://raider.io/api/crawler/guilds', data))
+			#print(pageJSON['success'], pageJSON['jobData']['jobId'], pageJSON['jobData']['batchId'])
+			checkStatus = True
+			startTime = time.time()
+			while checkStatus:
+				status = json.loads(await fetchWebpage(self, 'https://raider.io/api/crawler/monitor?batchId=' + postJSON['jobData']['batchId']))
+				await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\nStatus: {} Currently Processing: {}/{}'.format((startTime + 60 - time.time()), status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+				if ((status['batchInfo']['status'] != 'waiting' and status['batchInfo']['status'] != 'active')) or startTime + 60 < time.time():
+					checkStatus = False
+					print("breaking from checkStatus because: " + status['batchInfo']['status'])
+				#print(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities'])
+				await asyncio.sleep(1)
+			print("Done requesting update from raider.io")
+			await self.bot.send_typing(ctx.message.channel)
+			await asyncio.sleep(6) # Just in case website still needs a little time to update things
+		except:
+			await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nStatus: Failed')
+			print("Failed to request raider.io guild update")
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
@@ -237,6 +276,7 @@ class WoW():
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await self.bot.send_message(ctx.message.channel, 'Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
+			await self.bot.delete_message(updateableMessage)
 			return False
 
 		try:
@@ -274,12 +314,13 @@ class WoW():
 				#embed.add_field(name='-', value=newMessage + '```', inline=False)
 		#await self.bot.send_message(ctx.message.channel, embed=embed)
 		
-		try:
-			data = { 'realmId': roster['guildRoster']['guild']['realm']['id'], 'realm': roster['guildRoster']['guild']['realm']['name'], 'region': roster['guildRoster']['guild']['region']['slug'], 'guild': roster['guildRoster']['guild']['name'], 'numMembers': 0 }
-			page = await postWebdata(self, 'https://raider.io/api/crawler/guilds', data)
-			print("Done requesting update from raider.io")
-		except:
-			print("Failed to request raider.io guild update")
+		#try:
+		#	data = { 'realmId': roster['guildRoster']['guild']['realm']['id'], 'realm': roster['guildRoster']['guild']['realm']['name'], 'region': roster['guildRoster']['guild']['region']['slug'], 'guild': roster['guildRoster']['guild']['name'], 'numMembers': 0 }
+		#	page = await postWebdata(self, 'https://raider.io/api/crawler/guilds', data)
+		#	print("Done requesting update from raider.io")
+		#except:
+		#	print("Failed to request raider.io guild update")
+		return True
 
 	@commands.command(pass_context=True)
 	@doThumbs()
