@@ -21,7 +21,7 @@ bot.TTS_FILE = config.TTS_FILE
 bot.DEFAULT_EMBED_COLOR = '444580'
 bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0'
 
-startup_extensions = [ 'announce', 'color', 'hots', 'osu', 'permissions', 'settings', 'tf2', 'utils', 'wow', 'wowtoken' ]
+startup_extensions = [ 'announce', 'color', 'hots', 'osu', 'permissions', 'server_management', 'settings', 'tf2', 'utils', 'wow', 'wowtoken' ]
 
 @bot.event
 async def on_ready():
