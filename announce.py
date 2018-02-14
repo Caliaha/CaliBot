@@ -1,7 +1,8 @@
 import asyncio
+import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import BoxIt, cleanUserInput, isBotOwner, no_pm, superuser
+from stuff import BoxIt, cleanUserInput, doThumbs, isBotOwner, no_pm, superuser
 from subprocess import Popen, PIPE
 		
 class Announce():
@@ -12,6 +13,7 @@ class Announce():
 		self.control = asyncio.Event()
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
 		self.file = '-w=' + self.bot.TTS_FILE
+		self.paused = False
 
 	async def checkIfConnected(self):
 		for voice in self.bot.voice_clients:
@@ -73,6 +75,8 @@ class Announce():
 			return cleanUserInput(member.name)
 
 	async def on_voice_state_update(self, before, after):
+		if self.paused:
+			return
 		try:
 			if after.name == self.bot.NAME and after.voice.voice_channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
 				await self.updateDB(after.server.id, after.voice.voice_channel.id)
@@ -238,15 +242,135 @@ class Announce():
 		for key in self.bot.voice_clients:
 			message2.addRow( [ key.server, key.server.id, key.channel, key.channel.id, key.is_connected() ] )
 			print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
-		
-		
-		
+
 		message.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
 		message2.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
 		
 		await self.bot.send_message(ctx.message.channel, '```' + message.box() + '```')
 		await self.bot.send_message(ctx.message.channel, '```' + message2.box() + '```')
+		await self.bot.send_message(ctx.message.channel, 'self.paused is set to: ' + str(self.paused))
 		await self.bot.send_message(ctx.message.channel, 'There should be no discrepancy between the previous two statements')
+
+	@commands.command(pass_context=True)
+	@superuser()
+	@no_pm()
+	@doThumbs()
+	async def mdg(self, ctx):
+		"""Moves everyone to your voice channel"""
+		destinationChannel = ctx.message.author.voice.voice_channel
+		if destinationChannel is None:
+			await self.bot.say("You are not in a voice channel")
+			return False
+		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		ignored_channels = []
+		try:
+			with connection.cursor() as cursor:
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				cursor.execute(sql, (ctx.message.server.id))
+				result = cursor.fetchone()
+				if result is not None:
+					ignored_channels = result['mdg_ignore'].split()
+		finally:
+			connection.close()
+
+		self.paused = True
+		for channel in ctx.message.server.channels:
+			if (channel.type == discord.ChannelType.voice and channel != destinationChannel and channel.id not in ignored_channels):
+				print(channel, channel.type)
+				listToMove = []
+				for member in channel.voice_members:
+					listToMove.append(member)
+				for member in listToMove: # I do this because moving during channel.voice_members iteration caused it to stop short
+					try:
+						await self.bot.move_member(member, destinationChannel)
+						print("Moving {} to {}".format(member.name, destinationChannel.name))
+					except:
+						print("Failed moving {} to {}".format(member.name, destinationChannel.name))
+		self.paused = False
+		return True
+
+	@commands.command(pass_context=True)
+	@superuser()
+	@no_pm()
+	@doThumbs()
+	async def mdgignore(self, ctx, channel : discord.Channel):
+		"""Adds channel to ignore list, bot will not pull members from this channel"""
+		print(channel.id)
+		try:
+			id = channel.id
+		except:
+			await self.bot.say('I was unable to get the id for that channel, please double check that you spelled it correctly.')
+			return False
+
+		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		try:
+			with connection.cursor() as cursor:
+				#Check if entry exists then update or create one
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				cursor.execute(sql, (ctx.message.server.id))
+				result = cursor.fetchone()
+				if result is not None:
+					if result['mdg_ignore'] is not None:
+						mdg_ignore = result['mdg_ignore'].split()
+					else:
+						mdg_ignore = []
+					#print(len(allowed_roles), allowed_roles)
+					if channel.id not in mdg_ignore:
+						mdg_ignore.append(channel.id)
+					else:
+						await self.bot.send_message(ctx.message.channel, channel.name + ' has already been added to the !mdg ignore list.')
+						return False
+					mdg_ignore = ' '.join(mdg_ignore)
+					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `serverID` = %s LIMIT 1"
+					cursor.execute(sql, (mdg_ignore, ctx.message.server.id))
+					connection.commit()
+				else:
+					sql = "INSERT INTO `guild_defaults` (`serverID`, `mdg_ignore`) VALUES(%s, %s)"
+					cursor.execute(sql, (ctx.message.server.id, channel.id))
+					connection.commit()
+				await self.bot.send_message(ctx.message.channel, channel.name + ' has been added to the !mdg ignore list.')
+		finally:
+			connection.close()
+		return True
+		
+	@commands.command(pass_context=True)
+	@superuser()
+	@no_pm()
+	@doThumbs()
+	async def mdgunignore(self, ctx, channel : discord.Channel):
+		"""Adds channel to ignore list, bot will not pull members from this channel"""
+		try:
+			id = channel.id
+		except:
+			await self.bot.say('I was unable to get the id for that channel, please double check that you spelled it correctly.')
+			return False
+
+		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		try:
+			with connection.cursor() as cursor:
+				#Check if entry exists then update or create one
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				cursor.execute(sql, (ctx.message.server.id))
+				result = cursor.fetchone()
+				if result is not None:
+					if result['mdg_ignore'] is not None:
+						mdg_ignore = result['mdg_ignore'].split()
+					else:
+						mdg_ignore = []
+					if channel.id in mdg_ignore:
+						mdg_ignore.remove(channel.id)
+					else:
+						pass
+						#await self.bot.send_message(ctx.message.channel, channel.name + ' was not in the !mdg ignore list.')
+						#return False
+					mdg_ignore = ' '.join(mdg_ignore)
+					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `serverID` = %s LIMIT 1"
+					cursor.execute(sql, (mdg_ignore, ctx.message.server.id))
+					connection.commit()
+				await self.bot.send_message(ctx.message.channel, channel.name + ' has been removed to the !mdg ignore list.')
+		finally:
+			connection.close()
+		return True
 
 def setup(bot):
 	bot.add_cog(Announce(bot))
