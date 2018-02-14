@@ -85,11 +85,11 @@ def superuser():
 		async def wrapper(*args, **kwargs):
 			self = args[0]
 			ctx = args[1]
-			if (ctx.message.server.owner == ctx.message.author):
-				print("checkPermissions, user is server owner")
-				return await func(*args, **kwargs)
 			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 				print("checkPermissions, user is bot owner")
+				return await func(*args, **kwargs)
+			if (ctx.message.server != None and ctx.message.server.owner == ctx.message.author):
+				print("checkPermissions, user is server owner")
 				return await func(*args, **kwargs)
 			await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have permission to use this command.")
 			return False
