@@ -201,8 +201,8 @@ class Announce():
 		await self.joinOrMove(ctx)
 	
 	@commands.command(pass_context=True, hidden=True)
-	@superuser()
 	@no_pm()
+	@superuser()
 	async def say(self, ctx, message):
 		tts = { }
 		tts["message"] = "<volume level='50'>" + cleanUserInput(message)
@@ -252,8 +252,8 @@ class Announce():
 		await self.bot.send_message(ctx.message.channel, 'There should be no discrepancy between the previous two statements')
 
 	@commands.command(pass_context=True)
-	@superuser()
 	@no_pm()
+	@superuser()
 	@doThumbs()
 	async def mdg(self, ctx):
 		"""Moves everyone to your voice channel"""
@@ -290,8 +290,8 @@ class Announce():
 		return True
 
 	@commands.command(pass_context=True)
-	@superuser()
 	@no_pm()
+	@superuser()
 	@doThumbs()
 	async def mdgignore(self, ctx, channel : discord.Channel):
 		"""Adds channel to ignore list, bot will not pull members from this channel"""
@@ -334,8 +334,8 @@ class Announce():
 		return True
 		
 	@commands.command(pass_context=True)
-	@superuser()
 	@no_pm()
+	@superuser()
 	@doThumbs()
 	async def mdgunignore(self, ctx, channel : discord.Channel):
 		"""Adds channel to ignore list, bot will not pull members from this channel"""
