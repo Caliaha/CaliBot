@@ -261,9 +261,10 @@ class Announce():
 		if destinationChannel is None:
 			await self.bot.say("You are not in a voice channel")
 			return False
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+
 		ignored_channels = []
 		try:
+			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
 				cursor.execute(sql, (ctx.message.server.id))
@@ -286,6 +287,11 @@ class Announce():
 						print("Moving {} to {}".format(member.name, destinationChannel.name))
 					except:
 						print("Failed moving {} to {}".format(member.name, destinationChannel.name))
+		try:
+			player = self.VOICE_CHANNELS[ctx.message.server.id].create_ffmpeg_player("./media/getoverhere.mp3")
+			player.start()
+		except:
+			print("Could not play get over here sound")
 		self.paused = False
 		return True
 
