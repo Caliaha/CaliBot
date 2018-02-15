@@ -288,8 +288,10 @@ class Announce():
 					except:
 						print("Failed moving {} to {}".format(member.name, destinationChannel.name))
 		try:
-			player = self.VOICE_CHANNELS[ctx.message.server.id].create_ffmpeg_player("./media/getoverhere.mp3")
+			self.control.clear()
+			player = self.VOICE_CHANNELS[ctx.message.server.id].create_ffmpeg_player("./media/getoverhere.mp3", after=self.control.set)
 			player.start()
+			await self.control.wait()
 		except:
 			print("Could not play get over here sound")
 		self.paused = False
