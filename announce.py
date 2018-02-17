@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import BoxIt, cleanUserInput, doThumbs, isBotOwner, no_pm, superuser
+from stuff import BoxIt, cleanUserInput, doThumbs, isBotOwner, superuser
 from subprocess import Popen, PIPE
 		
 class Announce():

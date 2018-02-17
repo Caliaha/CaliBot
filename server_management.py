@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from stuff import doThumbs, superuser, no_pm
+from stuff import doThumbs, superuser
 
 class ServerManagement():
 	def __init__(self, bot):
@@ -8,7 +8,7 @@ class ServerManagement():
 
 	@commands.command(pass_context=True)
 	@doThumbs()
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def banid(self, ctx, user_id : str):
 		"""Ban member from guild by their id"""
@@ -30,7 +30,7 @@ class ServerManagement():
 
 	@commands.command(pass_context=True)
 	@doThumbs()
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def unbanid(self, ctx, user_id : str):
 		"""Unban member from guild by their id"""

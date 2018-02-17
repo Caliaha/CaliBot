@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 import json
 import os.path
@@ -12,13 +13,13 @@ class osu():
 	@commands.command(pass_context=True)
 	async def osu(self, ctx, user=None):
 		"""Look up osu! player profile"""
-		if user is None or ctx.message.author.server.get_member_named(user):
+		if user is None or ctx.message.author.guild.get_member_named(user):
 			try:
-				user = ctx.message.author.server.get_member_named(user)
+				user = ctx.message.author.guild.get_member_named(user)
 			except:
 				pass
 
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			try:
 				with connection.cursor() as cursor:
 					#Check if entry exists then update or create one
@@ -105,7 +106,7 @@ class osu():
 			img = img.crop((0, 0, imageWidth, imageHeight))
 
 		img.save('osu/osu.png')
-		await self.bot.send_file(ctx.message.channel, 'osu/osu.png')
+		await ctx.send(file=discord.File('osu/osu.png'))
 		os.remove('osu/avatar.jpg')
 		os.remove('osu/osu.png')
 

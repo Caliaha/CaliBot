@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import getRoleID, no_pm, superuser
+from stuff import getRoleID, superuser
 
 class Permissions():
 	def __init__(self, bot):
@@ -10,7 +10,7 @@ class Permissions():
 		self.commandsRoleRestricted = [ 'color', 'set' ] # Fix this
 
 	@commands.command(pass_context=True, hidden = True)
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def toggle(self, ctx, command: str):
 		if command not in self.commands:
@@ -45,7 +45,7 @@ class Permissions():
 			connection.close()
 		
 	@commands.command(pass_context=True, hidden = True)
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def allow(self, ctx, command: str, role: discord.Role):
 		if command not in self.commandsRoleRestricted:
@@ -87,7 +87,7 @@ class Permissions():
 			connection.close()
 
 	@commands.command(pass_context=True, hidden = True)
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def deny(self, ctx, command: str, role: discord.Role):
 		if command not in self.commandsRoleRestricted:
@@ -123,7 +123,7 @@ class Permissions():
 			connection.close()
 
 	@commands.command(pass_context=True, hidden = True)
-	@no_pm()
+	@commands.guild_only()
 	async def allowed(self, ctx, command: str):
 		if command not in self.commandsRoleRestricted:
 			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")

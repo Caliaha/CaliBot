@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import checkPermissions, getSnowflake, no_pm, superuser, isSuperUser, cleanUserInput
+from stuff import checkPermissions, getSnowflake, superuser, isSuperUser, cleanUserInput
 
 class Settings():
 	def __init__(self, bot):
@@ -9,7 +9,7 @@ class Settings():
 		self.settings = [ 'phonetic', 'realm', 'character', 'battletag' ]
 
 	@commands.command(pass_context=True)
-	@no_pm()
+	@commands.guild_only()
 	@checkPermissions('set')
 	async def set(self, ctx, setting, value, member: discord.Member=None):
 		if setting not in self.settings:

@@ -6,7 +6,7 @@ from discord.ext import commands
 import json
 import pymysql.cursors
 import re
-from stuff import BoxIt, doThumbs, no_pm, superuser, fetchWebpage, postWebdata
+from stuff import BoxIt, doThumbs, superuser, fetchWebpage, postWebdata
 import time
 import urllib.parse
 import urllib.request
@@ -267,7 +267,7 @@ class WoW():
 			await ctx.trigger_typing()
 			await asyncio.sleep(6) # Just in case website still needs a little time to update things
 		except:
-			await updateableMessage.edit(content='Attempting to update website before I request the data\nStatus: Failed')
+			await updateableMessage.edit(content='Attempting to update website before I request the data\nStatus: Failed', delete_after=60)
 			print("Failed to request raider.io guild update")
 
 		try:
@@ -593,7 +593,7 @@ class WoW():
 
 	@commands.command(pass_context=True)
 	@superuser()
-	@no_pm()
+	@commands.guild_only()
 	async def defaultguild(self, ctx, *args):
 		try:
 			guild = args[0]
@@ -686,7 +686,7 @@ class WoW():
 			full = False
 		
 		
-		if (len(args) == 0 and ctx.message.server is not None):
+		if (len(args) == 0 and ctx.message.guild is not None):
 			guild, realm, updateabledMessage = await self.fetchGuildFromDB(ctx)
 
 		totalRequests = 0
@@ -699,99 +699,99 @@ class WoW():
 		#	region = args[2]
 		#except:
 		region = "US"
+		async with ctx.channel.typing():
+			try:
+				difficulty = args[2].lower()
+				if difficulty not in difficultyID:
+					raise
+			except:
+				difficulty = "normal"
+			try:
+				raid = args[3].lower()
+				if raid not in raidID:
+					raise
+			except:
+				raid = 'ant'
+			print(guild, realm)
 			
-		try:
-			difficulty = args[2]
-			if difficulty not in difficultyID:
-				raise
-		except:
-			difficulty = "normal"
-		try:
-			raid = args[3]
-			if raid not in raidID:
-				raise
-		except:
-			raid = 'ant'
-		print(guild, realm)
-		
-		try:
-			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-		except urllib.error.HTTPError as e:
-			print(e.reason)
-			await ctx.send('I was unable to search warcraftlogs.com for that guild')
-			return False
-		
-		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
+			try:
+				guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+				print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			except urllib.error.HTTPError as e:
+				print(e.reason)
+				await ctx.send('I was unable to search warcraftlogs.com for that guild')
+				return False
+			
+			guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
 
-		print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
-		guildMatch = guildPattern.search(guildList)
-		print(guildMatch)
-		print("Raid: ", raidID[raid])
-		print("Difficulty: ", difficultyID[difficulty])
-		if guildMatch is not None:
-				guildID = guildMatch[1]
-				guild = guildMatch[2]
-		else:
-			await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
-			return False
-		print("GuildID: ", guildID)
-		
-		try:
-			guildRoster = await fetchWebpage(self, 'https://www.warcraftlogs.com/guilds/characters/' + guildID)
-		except:
-			await ctx.send('I was unable to fetch the guild roster')
-		
-		characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">[\w ]+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
-		matches = characterPattern.search(guildRoster)
+			print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
+			guildMatch = guildPattern.search(guildList)
+			print(guildMatch)
+			print("Raid: ", raidID[raid])
+			print("Difficulty: ", difficultyID[difficulty])
+			if guildMatch is not None:
+					guildID = guildMatch[1]
+					guild = guildMatch[2]
+			else:
+				await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+				return False
+			print("GuildID: ", guildID)
+			
+			try:
+				guildRoster = await fetchWebpage(self, 'https://www.warcraftlogs.com/guilds/characters/' + guildID)
+			except:
+				await ctx.send('I was unable to fetch the guild roster')
+			
+			characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">[\w ]+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
+			matches = characterPattern.search(guildRoster)
 
-		RankingMetrics = [ 'dps', 'hps' ]
-		difficulties = [ 'normal', 'heroic' ]
-		boxes = { }
-		didStuff = { }
-		
-		if not full:
-			attendance = await self.fetchWarcraftLogsAttendance(guildID, '17')
-		else:
-			attendance = None
-		print("Attendance:", attendance)
-		if attendance is not None and len(attendance) > 0:
-			updateMessage = 'Performing lookup for <' + guild + '> on ' + realm + '\nUsing attendance data to decrease requests! Total Requests Made: '
-		else:
-			full = True
-			updateMessage = 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: '
-		print(full)
-		for character in characterPattern.findall(guildRoster):
-			print(character[0], character[1], character[2], character[3])
-			if int(character[3]) == 110 and (full or (character[2] in attendance)):
-				totalRequests += 1
-				try:
-					await updateableMessage.edit(updateMessage + str(totalRequests))
-				except:
-					print("Couldn't update totals message")
-				characterData = await self.getCharacterLog(character[1])
-				if characterData:
-					for difficulty in difficulties:
-						if difficulty not in boxes:
-							boxes[difficulty] = BoxIt()
-							boxes[difficulty].setTitle(difficulty.capitalize() + ' - <' + guild + '>')
-							#boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
-						try:
-							char = characterData[difficulty]
-							data = [ character[2], char['dps']['kills'], char['dps']['best'], char['dps']['median'], char['dps']['allstar'], char['hps']['best'], char['hps']['median'], char['hps']['allstar'] ]
-							boxes[difficulty].addRow(data)
-							print('Added character data for', character[2])
-							didStuff[difficulty] = True
-						except:
-							print('No data for', character[2], difficulty)
-		for difficulty in didStuff:
-			if didStuff[difficulty]:
-				boxes[difficulty].sort(0, False) # FIXME
-				boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
-				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
-		if len(didStuff) == 0:
-			await ctx.send('No log data found for guild')
-			return False
+			RankingMetrics = [ 'dps', 'hps' ]
+			difficulties = [ 'normal', 'heroic' ]
+			boxes = { }
+			didStuff = { }
+			
+			if not full:
+				attendance = await self.fetchWarcraftLogsAttendance(guildID, '17')
+			else:
+				attendance = None
+			print("Attendance:", attendance)
+			if attendance is not None and len(attendance) > 0:
+				updateMessage = 'Performing lookup for <' + guild + '> on ' + realm + '\nUsing attendance data to decrease requests! Total Requests Made: '
+			else:
+				full = True
+				updateMessage = 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: '
+			print(full)
+			for character in characterPattern.findall(guildRoster):
+				print(character[0], character[1], character[2], character[3])
+				if int(character[3]) == 110 and (full or (character[2] in attendance)):
+					totalRequests += 1
+					try:
+						await updateableMessage.edit(content=updateMessage + str(totalRequests), delete_after=180)
+					except:
+						print("Couldn't update totals message")
+					characterData = await self.getCharacterLog(character[1])
+					if characterData:
+						for difficulty in difficulties:
+							if difficulty not in boxes:
+								boxes[difficulty] = BoxIt()
+								boxes[difficulty].setTitle(difficulty.capitalize() + ' - <' + guild + '>')
+								#boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
+							try:
+								char = characterData[difficulty]
+								data = [ character[2], char['dps']['kills'], char['dps']['best'], char['dps']['median'], char['dps']['allstar'], char['hps']['best'], char['hps']['median'], char['hps']['allstar'] ]
+								boxes[difficulty].addRow(data)
+								print('Added character data for', character[2])
+								didStuff[difficulty] = True
+							except:
+								print('No data for', character[2], difficulty)
+			for difficulty in didStuff:
+				if didStuff[difficulty]:
+					boxes[difficulty].sort(0, False) # FIXME
+					boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
+					await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
+			if len(didStuff) == 0:
+				await ctx.send('No log data found for guild')
+				return False
 		return True
 
 	async def fetchGuildFromDB(self, ctx):
@@ -932,7 +932,7 @@ class WoW():
 			region = "US"
 
 			try:
-				difficulty = args[2]
+				difficulty = args[2].lower()
 				if difficulty not in difficultyID:
 					raise
 			except:
