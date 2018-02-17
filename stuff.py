@@ -74,7 +74,7 @@ def isBotOwner():
 			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 				print("checkPermissions, user is bot owner")
 				return await func(*args, **kwargs)
-			await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have permission to use this command.")
+			await ctx.send("I'm sorry but you don't have permission to use this command.")
 			return False
 		return wrapper
 	return decorator
@@ -88,10 +88,10 @@ def superuser():
 			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 				print("checkPermissions, user is bot owner")
 				return await func(*args, **kwargs)
-			if (ctx.message.server != None and ctx.message.server.owner == ctx.message.author):
+			if (ctx.guild != None and ctx.guild.owner == ctx.message.author):
 				print("checkPermissions, user is server owner")
 				return await func(*args, **kwargs)
-			await self.bot.send_message(ctx.message.channel, "I'm sorry but you don't have permission to use this command.")
+			await ctx.send("I'm sorry but you don't have permission to use this command.")
 			return False
 		return wrapper
 	return decorator

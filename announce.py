@@ -36,21 +36,31 @@ class Announce():
 
 	async def playTTS(self):
 		while True:
-			self.control.clear()
+			#self.control.clear()
 			tts = await self.queue.get()
 			print(tts["guild"])
 			if tts["guild"].id in self.VOICE_CHANNELS:
 				guild = tts["guild"]
 				if tts["action"]:
 					await self.updateNickname(tts["guild"], tts["name"], tts["action"])
-				#process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, tts["message"]])
-				#(output, err) = process.communicate()
-				#exit_code = process.wait()
+				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, tts["message"]])
+				(output, err) = process.communicate()
+				exit_code = process.wait()
  
-				#player = self.VOICE_CHANNELS[guild.id].create_ffmpeg_player("./media/getoverhere.mp3", after=self.control.set)
+				voice = self.VOICE_CHANNELS[guild.id]
+				try:
+					voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
+				except Exception as e:
+					print(e, 'Error in voice.play')
+				#player = self.VOICE_CHANNELS[guild.id].FFmpegPCMAudio("./calibot.wav", after=self.control.set)
 				#player.start()
 				#self.VOICE_CHANNELS[guild.id].player = player
 				#await self.control.wait()
+				print('Sleeping while playing')
+				while(voice.is_playing()): #FIX ME
+					#print('sleeping')
+					asyncio.sleep(0.1)
+				print('Done sleeping')
 				await self.updateNickname(tts["guild"], None)
 			else:
 				print("I was asked to announce for something that is not or no longer in self.VOICE_CHANNELS")
@@ -76,9 +86,9 @@ class Announce():
 			return cleanUserInput(member.name)
 
 	async def on_voice_state_update(self, member, before, after):
-		if self.paused:
-			return
-		print(member.guild.id, after.channel.id)
+		print("VOICE_STATE_UPDATE", member.guild.id, after.channel)
+		#if self.paused:
+		#	return
 		try:
 			if member.name == self.bot.NAME and after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
 				await self.updateDB(member.guild.id, after.channel.id)
@@ -88,6 +98,8 @@ class Announce():
 		guild = member.guild
 		voiceBefore = before.channel
 		voiceAfter = after.channel
+		if (before.channel == after.channel):
+			print("The before and after channels were the same, weird")
 		await self.checkIfConnected()
 		if (guild.id not in self.VOICE_CHANNELS):
 			return
@@ -138,12 +150,15 @@ class Announce():
 
 	async def joinVoiceChannel(self, guildID, channel):
 		print("joinVoiceChannel", guildID, channel)
-		voice = await channel.connect()
-		print(voice)
-		self.VOICE_CHANNELS[guildID] = voice
-		await self.updateDB(guildID, channel.id)
+		#print(channel.permissions_for(self.bot))
+		try:
+			voice = await channel.connect()
+			self.VOICE_CHANNELS[guildID] = voice
+			await self.updateDB(guildID, channel.id)
+		except Exception as e:
+			print("Failed to joinVoiceChannel", e)
 		
-		return voice
+		return voice or None
 
 	async def leaveVoiceChannel(self, serverID, channel):
 		try:
@@ -158,17 +173,17 @@ class Announce():
 		await self.removeFromDB(serverID, channel)
 
 	async def joinOrMove(self, ctx):
-		channel = ctx.message.author.voice.voice_channel
-		serverID = ctx.message.author.server.id
+		channel = ctx.message.author.voice.channel
+		guildID = ctx.guild.id
  
-		if serverID in self.VOICE_CHANNELS:
-			if self.VOICE_CHANNELS[serverID].channel is channel or channel is None:
-				await self.leaveVoiceChannel(serverID, channel)
+		if guildID in self.VOICE_CHANNELS:
+			if self.VOICE_CHANNELS[guildID].channel is channel or channel is None:
+				await self.leaveVoiceChannel(guildID, channel)
 			else:
-				await self.VOICE_CHANNELS[serverID].move_to(channel)
-				await self.updateDB(serverID, channel.id)
+				await self.VOICE_CHANNELS[guildID].move_to(channel)
+				await self.updateDB(guildID, channel.id)
 		elif channel:
-			await self.joinVoiceChannel(serverID, channel)
+			await self.joinVoiceChannel(guildID, channel)
 		else:
 			await ctx.send("I couldn't figure out which voice channel you were in.")
 
@@ -189,7 +204,7 @@ class Announce():
 						print(guild.id, channel)
 						await self.joinVoiceChannel(guild.id, channel)
 		except:
-			print("on_ready() unable to connect to db")
+			print("on_ready() unable to connect to db or something")
 		finally:
 			connection.close()
 			
@@ -198,14 +213,14 @@ class Announce():
 			await self.updateNickname(guild, None)
 
 	@commands.command(pass_context=True, description="Bot will join your voice channel and announces who joins or leaves the voice channel you are in, limit one per guild")
-	@no_pm()
+	@commands.guild_only()
 	async def announce(self, ctx):
 		"""Bot announces who joins or leaves your voice channel"""
 		await self.checkIfConnected()
 		await self.joinOrMove(ctx)
 	
 	@commands.command(pass_context=True, hidden=True)
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def say(self, ctx, message):
 		tts = { }
@@ -215,20 +230,20 @@ class Announce():
 		await self.queue.put(tts)
 
 	@commands.command(pass_context=True)
-	@no_pm()
+	@commands.guild_only()
 	@superuser()
 	async def forcereconnect(self, ctx):
 		"""Bot attempts to leave and rejoin channel"""
 		await ctx.send('I will attempt to disconnect and rejoin the voice channel, this may not work.')
 		await self.checkIfConnected()
-		if ctx.message.author.server.id in self.VOICE_CHANNELS:
-			server = self.VOICE_CHANNELS[ctx.message.author.server.id]
+		if ctx.guild.id in self.VOICE_CHANNELS:
+			guild = self.VOICE_CHANNELS[ctx.guild.id]
 			try:
-				await self.leaveVoiceChannel(ctx.message.author.server.id, server.channel) 
+				await self.leaveVoiceChannel(ctx.guild.id, guild.channel) 
 			except:
 				print("ERROR: Unable to leave voice channel in forcereconnect()")
 			try:
-				await self.joinVoiceChannel(ctx.message.author.server.id, server.channel)
+				await self.joinVoiceChannel(ctx.guild.id, guild.channel)
 			except:
 				print("ERROR: Failed to join voice channel in forcereconnect()")
 
@@ -237,15 +252,15 @@ class Announce():
 	async def debugannounce(self, ctx):
 		message = BoxIt()
 		message.setTitle('Voice Channels - Announce')
-		for server, client in self.VOICE_CHANNELS.items():
-			message.addRow( [ client.server, client.server.id, client.channel, client.channel.id, client.is_connected() ] )
-			print(server, client.server, client.server.id, client.channel, client.channel.id, client.is_connected())
+		for guild, client in self.VOICE_CHANNELS.items():
+			message.addRow( [ client.guild, client.guild.id, client.channel, client.channel.id, client.is_connected() ] )
+			#print(server, client.server, client.server.id, client.channel, client.channel.id, client.is_connected())
 		
 		message2 = BoxIt()
 		message2.setTitle('Voice Channels - Actual')
 		for key in self.bot.voice_clients:
-			message2.addRow( [ key.server, key.server.id, key.channel, key.channel.id, key.is_connected() ] )
-			print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
+			message2.addRow( [ key.guild, key.guild.id, key.channel, key.channel.id, key.is_connected() ] )
+			#print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
 
 		message.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
 		message2.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
