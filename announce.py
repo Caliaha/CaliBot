@@ -48,20 +48,24 @@ class Announce():
 				exit_code = process.wait()
  
 				voice = self.VOICE_CHANNELS[guild.id]
-				try:
-					voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
-				except Exception as e:
-					print(e, 'Error in voice.play')
-				#player = self.VOICE_CHANNELS[guild.id].FFmpegPCMAudio("./calibot.wav", after=self.control.set)
-				#player.start()
-				#self.VOICE_CHANNELS[guild.id].player = player
-				#await self.control.wait()
-				print('Sleeping while playing')
-				while(voice.is_playing()): #FIX ME
-					#print('sleeping')
-					asyncio.sleep(0.1)
-				print('Done sleeping')
-				await self.updateNickname(tts["guild"], None)
+				
+				if (not voice.is_connected()):
+					print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
+				else:
+					try:
+						voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
+					except Exception as e:
+						print(e, 'Error in voice.play')
+					#player = self.VOICE_CHANNELS[guild.id].FFmpegPCMAudio("./calibot.wav", after=self.control.set)
+					#player.start()
+					#self.VOICE_CHANNELS[guild.id].player = player
+					#await self.control.wait()
+					print('Sleeping while playing')
+					while(voice.is_playing()): #FIX ME
+						#print('sleeping')
+						asyncio.sleep(0.1)
+					print('Done sleeping')
+					await self.updateNickname(tts["guild"], None)
 			else:
 				print("I was asked to announce for something that is not or no longer in self.VOICE_CHANNELS")
 
