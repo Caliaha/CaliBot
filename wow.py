@@ -77,7 +77,7 @@ class WoW():
 			return None, None
 
 		if (toon == '*' or snowflake):
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			try:
 				with connection.cursor() as cursor:
 					#Check if entry exists then update or create one
@@ -114,12 +114,12 @@ class WoW():
 	@doThumbs()
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
  
 		wowheadData = await fetchWebpage(self, 'https://www.wowhead.com')
 		if wowheadData is False:
 			print("Couldn't access wowhead.com")
-			await self.bot.send_message(ctx.message.channel, 'I was unable to access wowhead.com')
+			await ctx.send('I was unable to access wowhead.com')
 			return False
   
 		affix1P = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-1" class="icontiny"><img src=".*?"> (.*?)</a>')
@@ -135,7 +135,7 @@ class WoW():
 		msg = 'Mythic+ Affixes'
 
 		if affix1 is None or affix2 is None or affix3 is None:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find the affixes on wowhead.com. If it\'s a tuesday, wowhead may not have yet updated them for this week.')
+			await ctx.send('I was unable to find the affixes on wowhead.com. If it\'s a tuesday, wowhead may not have yet updated them for this week.')
 			print("Couldn't find the affixes")
 			return False
 
@@ -156,9 +156,9 @@ class WoW():
 			msg += '\nThe affixes for this week are: ' + affix1[2] + ', ' + affix2[2] + ', and ' + affix3[2] + '.\nThere were some errors while attempting to fetch their effects.'
 
 		try:
-			await self.bot.send_message(ctx.message.channel, embed=embed)
+			await ctx.send(embed=embed)
 		except discord.HTTPException as e:
-			await self.bot.send_message(ctx.message.channel, msg)
+			await ctx.send(msg)
 			print(e)
  
 		if succeded > 0:
@@ -169,13 +169,13 @@ class WoW():
 	@commands.command(pass_context=True, description='Set default character/realm combo for WoW commands')
 	async def setmain(self, ctx, *, toon: str):
 		"""Set your default character to be used by other commands"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
-			await self.bot.send_message(ctx.message.channel, 'Usage: !setmain character realm')
+			await ctx.send('Usage: !setmain character realm')
 			return False
 			
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 
 		try:
 			with connection.cursor() as cursor:
@@ -191,7 +191,7 @@ class WoW():
 					sql = "UPDATE `usersettings` SET `character` = %s, `realm` = %s WHERE `discordID` = %s LIMIT 1"
 					cursor.execute(sql, (character, realm, ctx.message.author.id))
 					connection.commit()
-				await self.bot.send_message(ctx.message.channel, ctx.message.author.name + '\'s main has been set to **' + character + '** on **' + realm + '**')
+				await ctx.send(ctx.message.author.name + '\'s main has been set to **' + character + '** on **' + realm + '**')
 		finally:
 			connection.close()
 
@@ -202,22 +202,22 @@ class WoW():
 		try:
 			guild = args[0]
 		except:
-			guild = "Clan Destined"
+			guild = "The Touch of Chaos"
 		try:
 			realm = args[1]
 		except:
-			realm = "Perenolde"
+			realm = "Cairne"
 
-		if (len(args) == 0 and ctx.message.server is not None):
+		if (len(args) == 0 and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Error searching for guild\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
 			return False
 
 		guilds = json.loads(rawJSON)
@@ -244,10 +244,10 @@ class WoW():
 		try:
 			updateableMessage
 		except:
-			updateableMessage = await self.bot.send_message(ctx.message.channel, 'Performing lookup for <' + guild + '> on ' + realm)
+			updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm)
 
 		try:
-			await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nStatus: Unknown Currently Processing: 0/0')
+			await updateableMessage.edit(content='Attempting to update website before I request the data Status: Unknown Currently Processing: 0/0', delete_after=60)
 
 			data = { 'realmId': guildData['data']['realm']['id'], 'realm': guildData['data']['realm']['name'], 'region': guildData['data']['region']['slug'], 'guild': guildData['data']['name'], 'numMembers': 50 }
 
@@ -257,17 +257,17 @@ class WoW():
 			startTime = time.time()
 			while checkStatus:
 				status = json.loads(await fetchWebpage(self, 'https://raider.io/api/crawler/monitor?batchId=' + postJSON['jobData']['batchId']))
-				await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\nStatus: {} Currently Processing: {}/{}'.format((startTime + 60 - time.time()), status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+				await updateableMessage.edit(content='Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\nStatus: {} Currently Processing: {}/{}'.format((startTime + 60 - time.time()), status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']), delete_after=60)
 				if ((status['batchInfo']['status'] != 'waiting' and status['batchInfo']['status'] != 'active')) or startTime + 60 < time.time():
 					checkStatus = False
 					print("breaking from checkStatus because: " + status['batchInfo']['status'])
 				#print(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities'])
 				await asyncio.sleep(1)
 			print("Done requesting update from raider.io")
-			await self.bot.send_typing(ctx.message.channel)
+			await ctx.trigger_typing()
 			await asyncio.sleep(6) # Just in case website still needs a little time to update things
 		except:
-			await self.bot.edit_message(updateableMessage, 'Attempting to update website before I request the data\nStatus: Failed')
+			await updateableMessage.edit(content='Attempting to update website before I request the data\nStatus: Failed')
 			print("Failed to request raider.io guild update")
 
 		try:
@@ -275,7 +275,7 @@ class WoW():
 			print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
 			await self.bot.delete_message(updateableMessage)
 			return False
 
@@ -283,7 +283,7 @@ class WoW():
 			roster = json.loads(rawJSON)
 		except:
 			print("Failed to parse JSON data")
-			await self.bot.send_message(ctx.message.channel, 'Error parsing JSON for that guild')
+			await ctx.send('Error parsing JSON for that guild')
 			return False
 		
 		box = BoxIt()
@@ -305,14 +305,14 @@ class WoW():
 			newMessage = ''
 			for line in lines:
 				if len(newMessage + line) > 1995:
-					await self.bot.send_message(ctx.message.channel, newMessage + '```')
+					await ctx.send(newMessage + '```')
 					#embed.add_field(name='-', value=newMessage + '```', inline=False)
 					newMessage = '```'
 				newMessage += line
 			if newMessage != '':
-				await self.bot.send_message(ctx.message.channel, newMessage + '```')
+				await ctx.send(newMessage + '```')
 				#embed.add_field(name='-', value=newMessage + '```', inline=False)
-		#await self.bot.send_message(ctx.message.channel, embed=embed)
+		#await ctx.send(embed=embed)
 		
 		#try:
 		#	data = { 'realmId': roster['guildRoster']['guild']['realm']['id'], 'realm': roster['guildRoster']['guild']['realm']['name'], 'region': roster['guildRoster']['guild']['region']['slug'], 'guild': roster['guildRoster']['guild']['name'], 'numMembers': 0 }
@@ -326,16 +326,16 @@ class WoW():
 	@doThumbs()
 	async def wp(self, ctx, *, toon = '*'):
 		"""Mythic+ completion rates as shown on wowprogress.com"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
-			await self.bot.send_message(ctx.message.channel, 'Unable to find character and realm name, please double check the command you typed\nUsage: !wp character realm')
+			await ctx.send('Unable to find character and realm name, please double check the command you typed\nUsage: !wp character realm')
 			return False
  
 		try:
 			wowprogressData = await fetchWebpage(self, 'https://www.wowprogress.com/character/us/' + realm + '/' + character)
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Wowprogress data not found')
+			await ctx.send('Wowprogress data not found')
 			print("Couldn't find wowprogress data for", character, realm)
 			return False
 		classP = re.compile('<i>.*?<span class=".*?">(.*?)</span> \d+</i>&nbsp;&nbsp;&nbsp;&nbsp;<a class="armoryLink')
@@ -352,7 +352,7 @@ class WoW():
 			mythicMessage = 'Mythic+ dungeons completed within the time limit:'
 			mythicMessage += '\n**+2** -> ' + mythicTwo[1] + ', **+5** -> ' + mythicFive[1] + ', **+10** -> ' + mythicTen[1]
 		else:
-			await self.bot.send_message(ctx.message.channel, 'Mythic+ data not found')
+			await ctx.send('Mythic+ data not found')
 			return False
  
 		mythicScoreP = re.compile('<div class="gearscore">Mythic\+ Score <span class="small_tag info">.*?</span>: (.*?)</div>')
@@ -400,10 +400,10 @@ class WoW():
 			print("Failed while requesting wowprogress update")
    
 		try:
-			await self.bot.send_message(ctx.message.channel, embed=embed)
+			await ctx.send(embed=embed)
 		except discord.HTTPException as e:
 			print(e)
-			await self.bot.send_message(ctx.message.channel, mythicMessage)
+			await ctx.send(mythicMessage)
 		return True
 	
 	async def getIndividualPerformance(self, characterID, type, zone, difficulty):
@@ -464,10 +464,10 @@ class WoW():
 	@doThumbs()
 	async def logs(self, ctx, *, toon = "*"):
 		"""Shows basic warcraft logs summary"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
-			await self.bot.send_message(ctx.message.channel, 'Unable to find character and realm name, please double check the command you typed\nUsage: !logs character realm')
+			await ctx.send('Unable to find character and realm name, please double check the command you typed\nUsage: !logs character realm')
 			return False
  
 		characterIDPattern = re.compile('var characterID = (\d+);')
@@ -476,11 +476,11 @@ class WoW():
 			characterIDPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/character/us/' + realm + '/' + character)
 		except:
 			print("Exception while accessing character Id page")
-			await self.bot.send_message(ctx.message.channel, 'An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
+			await ctx.send('An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
 			return False
 		characterID = characterIDPattern.search(characterIDPage)
 		if characterID is None:
-			await self.bot.send_message(ctx.message.channel, "Couldn't find character ID, character or realm may be incorrect or character doesn't exist on warcraftlogs.com or bad regex")
+			await ctx.send("Couldn't find character ID, character or realm may be incorrect or character doesn't exist on warcraftlogs.com or bad regex")
 			return False
   
 		try:
@@ -522,11 +522,11 @@ class WoW():
 				statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID[1] + '/' + selectedRankingZone + '/' + RankingMetric)
 			except:
 				print("Exception while accessing statsDataPage")
-				await self.bot.send_message(ctx.message.channel, 'An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
+				await ctx.send('An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
 				return False
 			statsData = statsPattern.findall(statsDataPage)
 			if statsData is None:
-				await self.bot.send_message(ctx.message.channel, 'No warcraftlogs data found, this is very likely a regex error.')
+				await ctx.send('No warcraftlogs data found, this is very likely a regex error.')
 				return False
   
 			if RankingMetric is 'hps':
@@ -557,25 +557,25 @@ class WoW():
 
 		if didStuff:
 			try:
-				await self.bot.send_message(ctx.message.channel, embed=embed)
+				await ctx.send(embed=embed)
 			except discord.HTTPException as e:
 				print(e)
-				await self.bot.send_message(ctx.message.channel, warcraftLogsMessage)
+				await ctx.send(warcraftLogsMessage)
 			return True
 		else:
-			await self.bot.send_message(ctx.message.channel, 'No warcraftlogs data found or bad regex')
+			await ctx.send('No warcraftlogs data found or bad regex')
 			return False
 
 	@commands.command(pass_context=True)
 	@doThumbs()
 	async def wowtoken(self, ctx):
 		"""Show current wow token price"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		tokenpattern = re.compile('\{"NA":\{"timestamp":(.*?)."raw":\{"buy":(.*?)."24min":(.*?),"24max":(.*?)."timeToSell":')
 		try:
 			tokenjson = urllib.request.urlopen('https://data.wowtoken.info/snapshot.json').read().decode('utf-8')
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Couldn\'t access wowtoken.info')
+			await ctx.send('Couldn\'t access wowtoken.info')
 			return False
 		tokenmatch = tokenpattern.match(tokenjson)
 		if tokenmatch is not None:
@@ -583,12 +583,12 @@ class WoW():
 			embed.set_thumbnail(url='https://i.imgur.com/Mm5Ywjn.png')
 			print('!wowtoken -> {:,}'.format(int(tokenmatch.group(2))))
 			try:
-				await self.bot.send_message(ctx.message.channel, embed=embed)
+				await ctx.send(embed=embed)
 			except:
-				await self.bot.send_message(ctx.message.channel, 'The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))))
+				await ctx.send('The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))))
 			return True
 		else:
-			await self.bot.send_message(ctx.message.channel, 'Failed to parse out wowtoken pricing information')
+			await ctx.send('Failed to parse out wowtoken pricing information')
 			return False
 
 	@commands.command(pass_context=True)
@@ -603,7 +603,7 @@ class WoW():
 			msg = 'Usage: !defaultguild "GUILD" "REALM"'
 			if (len(args)>0):
 				msg = 'I was unable to understand what you meant.\n' + msg
-			await self.bot.send_message(ctx.message.channel, msg)
+			await ctx.send(msg)
 			update = False
   
   
@@ -611,14 +611,14 @@ class WoW():
 		print(serverid)
 
 		try:
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
 				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
 				cursor.execute(sql, (serverid))
 				result = cursor.fetchone()
 				if update is False and result is not None:
-					await self.bot.send_message(ctx.message.channel, 'Currently the guild and realm for ' + ctx.message.server.name + ' is set to <' + result['guild'] + '> on ' + result['realm'])
+					await ctx.send('Currently the guild and realm for ' + ctx.message.server.name + ' is set to <' + result['guild'] + '> on ' + result['realm'])
 				print(serverid, result)
 				if update is True:
 					if result is None:
@@ -630,7 +630,7 @@ class WoW():
 						cursor.execute(sql, (guild, realm, serverid))
 						connection.commit()
 						#print(result)
-					await self.bot.send_message(ctx.message.channel, 'The default guild and realm for ' + ctx.message.server.name + ' has been set to <' + guild + '> on ' + realm) 
+					await ctx.send('The default guild and realm for ' + ctx.message.server.name + ' has been set to <' + guild + '> on ' + realm) 
 		finally:
 			connection.close()
 
@@ -639,11 +639,11 @@ class WoW():
 			newMessage = prepend
 			for line in lines:
 				if len(newMessage + line) > 1995:
-					await self.bot.send_message(ctx.message.channel, newMessage + append)
+					await ctx.send(newMessage + append)
 					newMessage = prepend
 				newMessage += line
 			if newMessage != prepend:
-				await self.bot.send_message(ctx.message.channel, newMessage + prepend)
+				await ctx.send(newMessage + prepend)
 
 	async def fetchWarcraftLogsAttendance(self, guildID, zoneID):
 		try:
@@ -691,10 +691,10 @@ class WoW():
 
 		totalRequests = 0
 		try:
-			updatableMessage
+			updateableMessage
 		except:
-			updatableMessage = await self.bot.send_message(ctx.message.channel, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: ' + str(totalRequests))
-		await self.bot.send_typing(ctx.message.channel)
+			updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a very long time! Total Requests Made: ' + str(totalRequests))
+		await ctx.trigger_typing()
 		#try:
 		#	region = args[2]
 		#except:
@@ -719,7 +719,7 @@ class WoW():
 			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 		except urllib.error.HTTPError as e:
 			print(e.reason)
-			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
+			await ctx.send('I was unable to search warcraftlogs.com for that guild')
 			return False
 		
 		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
@@ -733,14 +733,14 @@ class WoW():
 				guildID = guildMatch[1]
 				guild = guildMatch[2]
 		else:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+			await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
 			return False
 		print("GuildID: ", guildID)
 		
 		try:
 			guildRoster = await fetchWebpage(self, 'https://www.warcraftlogs.com/guilds/characters/' + guildID)
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to fetch the guild roster')
+			await ctx.send('I was unable to fetch the guild roster')
 		
 		characterPattern = re.compile('<a class="(\w+)" href="https://www\.warcraftlogs\.com/character/id/(\d+)">(\w+)</a>.*?<td class="\w+">[\w ]+<td class="main-table-number" style="width:16px">(\d+)<td', re.DOTALL)
 		matches = characterPattern.search(guildRoster)
@@ -766,7 +766,7 @@ class WoW():
 			if int(character[3]) == 110 and (full or (character[2] in attendance)):
 				totalRequests += 1
 				try:
-					await self.bot.edit_message(updatableMessage, updateMessage + str(totalRequests))
+					await updateableMessage.edit(updateMessage + str(totalRequests))
 				except:
 					print("Couldn't update totals message")
 				characterData = await self.getCharacterLog(character[1])
@@ -790,22 +790,22 @@ class WoW():
 				boxes[difficulty].setHeader( ['Name', 'Kills', 'DPS Best', 'Avg', 'Pnts', 'HPS Best', 'Avg', 'Pnts'] ) # FIXME
 				await self.sendBulkyMessage(ctx, boxes[difficulty].box(), '```', '```')
 		if len(didStuff) == 0:
-			await self.bot.send_message(ctx.message.channel, 'No log data found for guild')
+			await ctx.send('No log data found for guild')
 			return False
 		return True
 
 	async def fetchGuildFromDB(self, ctx):
 		try:
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-				cursor.execute(sql, (ctx.message.server.id))
+				cursor.execute(sql, (ctx.guild.id))
 				result = cursor.fetchone()
 				print(result)
 				if result is not None:
 					guild = result["guild"]
 					realm = result["realm"]
-					updateableMessage = await self.bot.send_message(ctx.message.channel, 'Using <' + guild + '> on ' + realm + ' for server ' + ctx.message.server.name)
+					updateableMessage = await ctx.send('Using <' + guild + '> on ' + realm + ' for server ' + ctx.guild.name)
 					return guild, realm, updateableMessage
 		except:
 			print("Database lookup failed fetchGuildFromDB")
@@ -832,7 +832,7 @@ class WoW():
 		if (len(args) == 0 and ctx.message.server is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 
 		region = "US"
 
@@ -842,7 +842,7 @@ class WoW():
 		try:
 			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
+			await ctx.send('I was unable to search warcraftlogs.com for that guild')
 			return False
 		
 		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
@@ -851,19 +851,19 @@ class WoW():
 				guildID = guildMatch[1]
 				guild = guildMatch[2]
 		else:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+			await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
 			return False
 
 		try:
 			reportlist = await fetchWebpage(self, "https://www.warcraftlogs.com/guilds/reportslist/" + str(guildID) + "/")
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to grab the reports list for that guild or something')
+			await ctx.send('I was unable to grab the reports list for that guild or something')
 			return False
 
 		try:
 			soup = BeautifulSoup(reportlist, "html.parser")
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to parse the webpage with BeautifulSoup')
+			await ctx.send('I was unable to parse the webpage with BeautifulSoup')
 			return False
 		
 		reportTable = soup.find('table', id = 'reports-table')
@@ -896,11 +896,11 @@ class WoW():
 		embed.set_footer(text='Git Gud, Scrubs!', icon_url='https://wowanalyzer.com/favicon.png')
 
 		try:
-			await self.bot.send_message(ctx.message.channel, embed=embed)
+			await ctx.send(embed=embed)
 			return True
 		except discord.HTTPException as e:
 			print(e)
-			await self.bot.send_message(ctx.message.channel, 'I need to be allowed to embed messages')
+			await ctx.send('I need to be allowed to embed messages')
 			return False
 		return True
 
@@ -922,138 +922,139 @@ class WoW():
 			realm = "Cairne"
 		
 		
-		if (len(args) == 0 and ctx.message.server is not None):
+		if (len(args) == 0 and ctx.guild is not None):
 			guild, realm, updateabledMessaged = await self.fetchGuildFromDB(ctx)
 
-		#try:
-		#	region = args[2]
-		#except:
-		region = "US"
+		async with ctx.channel.typing():
+			#try:
+			#	region = args[2]
+			#except:
+			region = "US"
 
-		try:
-			difficulty = args[2]
-			if difficulty not in difficultyID:
-				raise
-		except:
-			difficulty = "normal"
-		try:
-			raid = args[3]
-			if raid not in raidID:
-				raise
-		except:
-			raid = 'ant'
-		print(guild, realm)
-		
-		try:
-			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to search warcraftlogs.com for that guild')
-			return False
-
-		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
-
-		print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
-		guildMatch = guildPattern.search(guildList)
-		print(guildMatch)
-		print("Raid: ", raidID[raid])
-		print("Difficulty: ", difficultyID[difficulty])
-		if guildMatch is not None:
-				guildID = guildMatch[1]
-				guild = guildMatch[2]
-		else:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
-			return False
-		print("GuildID: ", guildID)
-		try:
-			guildRankings = await fetchWebpage(self, "https://www.warcraftlogs.com/rankings/guild/" + guildID + "/latest/")
-			serverMatchPattern = re.compile('var filterServer = (\d+);')
-			serverMatch = serverMatchPattern.search(guildRankings)
-			print(serverMatch)
-			serverID = serverMatch[1]
-			
-			print("Warcraftlogs ServerID:", serverID)
-		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to parse the server id for that guild, tell Cali about it')
-			return False
-
-		totalRequests = 0
-		try:
-			updatableMessage
-		except:
-			updatableMessage = await self.bot.send_message(ctx.message.channel, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests))
-		await self.bot.send_typing(ctx.message.channel)
-		urls = { }
-		urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/DPS/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-		urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-		urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-		urls['TANKING - DPS'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-
-		message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
-		didStuff = False
-
-
-		for url in urls:
-			print(urls[url])
-			box = BoxIt()
-			box.setTitle(url)
-			#box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 			try:
-				guildData = await fetchWebpage(self, urls[url])
-				totalRequests += 1
-				try:
-					await self.bot.edit_message(updatableMessage, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests))
-				except:
-					print("Couldn't update totals message")
+				difficulty = args[2]
+				if difficulty not in difficultyID:
+					raise
 			except:
-				print('Failed to get guild performance data')
-				await self.bot.send_message(ctx.message.channel, 'Something bad happened')
-
-			# Realm Rank, CharacterID, Zone, metric, Name, score
-			characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>([\d,]+).*?</tr>', re.DOTALL)
-			characterClassAndSpecPattern = re.compile('<img src="/img/icons/(.*?)-(.*?)\.jpg" class="players-table-spec-icon">')
+				difficulty = "normal"
+			try:
+				raid = args[3]
+				if raid not in raidID:
+					raise
+			except:
+				raid = 'ant'
+			print(guild, realm)
 			
+			try:
+				guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+				print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			except:
+				await ctx.send('I was unable to search warcraftlogs.com for that guild')
+				return False
 
-			for character in characterPattern.findall(guildData):
-				#print(character[0], character[1], character[2], character[3], character[4], character[5], character[6])
-				try:
-					classStuff = characterClassAndSpecPattern.search(character[1])
-					playerClass = classStuff[1]
-					playerSpec = classStuff[2]
-				except:
-					print(character)
-					playerClass = 'N/A'
-					playerSpec = 'N/A'
-				best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3], str(difficultyID[difficulty]))
-				totalRequests += 1
-				try:
-					await self.bot.edit_message(updatableMessage, 'Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests))
-				except:
-					print("Couldn't update totals message")
-				didStuff = True
-				box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
-			box.sort(6, True)
-			box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
-			message += '\n' + box.box()
+			guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
 
-		if didStuff:
-			lines = message.splitlines(True)
-			newMessage = ''
-			for line in lines:
-				if len(newMessage + line) > 1995:
-					#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid], description=newMessage + '```', color=0x9cf5a0)
-					#await self.bot.send_message(ctx.message.channel, embed=embed)
-					await self.bot.send_message(ctx.message.channel, newMessage + '```')
-					newMessage = '```'
-				newMessage += line
-			if newMessage != '':
-				#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid] + ' - Cont.', description=newMessage + '```', color=0x9cf5a0)
-				#await self.bot.send_message(ctx.message.channel, embed=embed)
-				await self.bot.send_message(ctx.message.channel, newMessage + '```')
-		else:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find the right data')
-			return False
-		return True
+			print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
+			guildMatch = guildPattern.search(guildList)
+			print(guildMatch)
+			print("Raid: ", raidID[raid])
+			print("Difficulty: ", difficultyID[difficulty])
+			if guildMatch is not None:
+					guildID = guildMatch[1]
+					guild = guildMatch[2]
+			else:
+				await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
+				return False
+			print("GuildID: ", guildID)
+			try:
+				guildRankings = await fetchWebpage(self, "https://www.warcraftlogs.com/rankings/guild/" + guildID + "/latest/")
+				serverMatchPattern = re.compile('var filterServer = (\d+);')
+				serverMatch = serverMatchPattern.search(guildRankings)
+				print(serverMatch)
+				serverID = serverMatch[1]
+				
+				print("Warcraftlogs ServerID:", serverID)
+			except:
+				await ctx.send('I was unable to parse the server id for that guild, tell Cali about it')
+				return False
+
+			totalRequests = 0
+			try:
+				updateableMessage
+			except:
+				updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
+			#await ctx.trigger_typing()
+			urls = { }
+			urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/DPS/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			urls['TANKING - DPS'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+
+			message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
+			didStuff = False
+
+
+			for url in urls:
+				print(urls[url])
+				box = BoxIt()
+				box.setTitle(url)
+				#box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
+				try:
+					guildData = await fetchWebpage(self, urls[url])
+					totalRequests += 1
+					try:
+						await updateableMessage.edit(content='Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
+					except:
+						print("Couldn't update totals message")
+				except:
+					print('Failed to get guild performance data')
+					await ctx.send('Something bad happened')
+
+				# Realm Rank, CharacterID, Zone, metric, Name, score
+				characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>([\d,]+).*?</tr>', re.DOTALL)
+				characterClassAndSpecPattern = re.compile('<img src="/img/icons/(.*?)-(.*?)\.jpg" class="players-table-spec-icon">')
+				
+
+				for character in characterPattern.findall(guildData):
+					#print(character[0], character[1], character[2], character[3], character[4], character[5], character[6])
+					try:
+						classStuff = characterClassAndSpecPattern.search(character[1])
+						playerClass = classStuff[1]
+						playerSpec = classStuff[2]
+					except:
+						print(character)
+						playerClass = 'N/A'
+						playerSpec = 'N/A'
+					best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3], str(difficultyID[difficulty]))
+					totalRequests += 1
+					try:
+						await updateableMessage.edit(content='Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
+					except:
+						print("Couldn't update totals message")
+					didStuff = True
+					box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
+				box.sort(6, True)
+				box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
+				message += '\n' + box.box()
+
+			if didStuff:
+				lines = message.splitlines(True)
+				newMessage = ''
+				for line in lines:
+					if len(newMessage + line) > 1995:
+						#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid], description=newMessage + '```', color=0x9cf5a0)
+						#await ctx.send(embed=embed)
+						await ctx.send(newMessage + '```')
+						newMessage = '```'
+					newMessage += line
+				if newMessage != '':
+					#embed=discord.Embed(title='Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid] + ' - Cont.', description=newMessage + '```', color=0x9cf5a0)
+					#await ctx.send(embed=embed)
+					await ctx.send(newMessage + '```')
+			else:
+				await ctx.send('I was unable to find the right data')
+				return False
+			return True
 
 	async def numSocketsGear(self, itemID, context, bonusList):
 		count = 0
@@ -1075,11 +1076,11 @@ class WoW():
 	@doThumbs()
 	async def gear(self, ctx, *, toon = '*'):
 		"""Shows current equipped gear and basic gem/enchant check"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
-			await self.bot.send_message(ctx.message.channel, 'Unable to find character and realm name, please double check the command you typed\nUsage: !gear character realm')
+			await ctx.send('Unable to find character and realm name, please double check the command you typed\nUsage: !gear character realm')
 			return False
  
 		gearSlots = [ 'head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2', 'mainHand', 'offHand' ] # Left out shirt, tabard
@@ -1087,12 +1088,12 @@ class WoW():
 		try:
 			itemsJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=items,guild&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
 		except:
-			await self.bot.send_message(ctx.message.channel, "Unable to access character data, check for typos or invalid realm or the Battle.net API is down")
+			await ctx.send("Unable to access character data, check for typos or invalid realm or the Battle.net API is down")
 			return False
 		try:
 			toon = json.loads(itemsJSON)
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Unable to parse JSON data, probably Cali\'s fault')
+			await ctx.send('Unable to parse JSON data, probably Cali\'s fault')
 			return False
 		#except discord.HTTPException as e:
 
@@ -1216,35 +1217,35 @@ class WoW():
 		#print('https://render-us.worldofwarcraft.com/character/' + toon['thumbnail'])
 
 		try:
-			await self.bot.send_message(ctx.message.channel, embed=embed)
+			await ctx.send(embed=embed)
 		except discord.HTTPException as e:
 			print(e)
-			await self.bot.send_message(ctx.message.channel, msg)
+			await ctx.send(msg)
 		return True
 
 	@commands.command(pass_context=True)
 	@doThumbs()
 	async def armory(self, ctx, *, toon = '*'):
 		"""Shows item level and progression info"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
-			await self.bot.send_message(ctx.message.channel, 'Unable to find character and realm name, please double check the command you typed\nUsage: !armory character realm')
+			await ctx.send('Unable to find character and realm name, please double check the command you typed\nUsage: !armory character realm')
 			return False
 		 
 		try:
 			characterJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=guild,progression,items,achievements&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
 			if (characterJSON == "{}"):
-				await self.bot.send_message(ctx.message.channel, 'Empty JSON Data, this character probably doesn\'t exist or something.')
+				await ctx.send('Empty JSON Data, this character probably doesn\'t exist or something.')
 				return False
 			try:
 				toon = json.loads(characterJSON)
 			except:
 				print('Unable to parse JSON data, probably Cali\'s fault')
-				await self.bot.send_message(ctx.message.channel, 'Unable to parse JSON data, probably Cali\'s fault')
+				await ctx.send('Unable to parse JSON data, probably Cali\'s fault')
 				return False
 		except:
-			await self.bot.send_message(ctx.message.channel, 'Unable to access api for ' + character + ' - ' + realm + '\nBattle.net API could also be down')
+			await ctx.send('Unable to access api for ' + character + ' - ' + realm + '\nBattle.net API could also be down')
 			return False
 
 		color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))
@@ -1322,7 +1323,7 @@ class WoW():
 			embed.description = 'Doesn\'t Have AOTC for the current tier'
 		  
 		try:
-			await self.bot.send_message(ctx.message.channel, embed=embed)
+			await ctx.send(embed=embed)
 		except discord.HTTPException as e:
 			characterProgress = toon['name'] + ' - ' + toon['realm']
 			characterProgress += '\nEquipped Item Level: ' + str(toon['items']['averageItemLevelEquipped']) + ' Total item Level: ' + str(toon['items']['averageItemLevel'])
@@ -1332,7 +1333,7 @@ class WoW():
 				characterProgress += '\nDoesn\'t have AOTC for the current tier'
 				characterProgress += '\n' + progressionMessage
 			print(e)
-			await self.bot.send_message(ctx.message.channel, characterProgress)
+			await ctx.send(characterProgress)
 		return True
 
 def setup(bot):

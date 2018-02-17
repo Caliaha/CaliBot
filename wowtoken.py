@@ -14,6 +14,7 @@ class WoWToken():
 		try:
 			tokenjson = await fetchWebpage(self, 'https://data.wowtoken.info/snapshot.json')
 		except:
+			print("Error fetching token price")
 			return False
 		tokenmatch = tokenpattern.match(tokenjson)
 		if tokenmatch is not None:
@@ -23,12 +24,15 @@ class WoWToken():
 
 	async def background_lookup(self):
 		await self.bot.wait_until_ready()
-		while not self.bot.is_closed:
+		while not self.bot.is_closed():
 			try:
 				token = await self.fetchWoWTokenGoldCost()
 				if token:
-					print('Set Now Playing to -> WoW Token: {:,}'.format(int(token)))
-					await self.bot.change_presence(game=discord.Game(name='WoW Token: {:,}'.format(int(token))))
+					try:
+						print('Set Now Playing to -> WoW Token: {:,}'.format(int(token)))
+						await self.bot.change_presence(game=discord.Game(name='WoW Token: {:,}'.format(int(token))))
+					except Exception as e:
+						print('Error changing presence to wow token price', e)
 				else:
 					await self.bot.change_presence(game=discord.Game(name=None))
 			except:

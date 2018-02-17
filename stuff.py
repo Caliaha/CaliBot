@@ -104,13 +104,13 @@ def doThumbs():
 			ctx = args[1]
 			if (await func(*args, **kwargs)):
 				try:
-					await self.bot.add_reaction(ctx.message, "\U0001F44D") # ThumbsUp
+					await ctx.message.add_reaction("\U0001F44D") # ThumbsUp
 				except:
 					print("Couldn't add Thumbs Up reaction")
 				return True
 			else:
 				try:
-					await self.bot.add_reaction(ctx.message, "\U0001F44E") # ThumbsDown
+					await ctx.message.add_reaction("\U0001F44E") # ThumbsDown
 				except:
 					print("Couldn't add Thumbs Down reaction")
 				return False
@@ -297,7 +297,7 @@ async def fetchWebpage(self, url, binary=False):
 	while attempts < 15:
 		try:
 			with async_timeout.timeout(15):
-				async with aiohttp.get(url, headers=headers) as r:
+				async with self.bot.SESSION.get(url, headers=headers) as r:
 					if r.status == 200:
 						if binary:
 							return await r.read()
@@ -308,8 +308,8 @@ async def fetchWebpage(self, url, binary=False):
 						return False
 					else:
 						raise
-		except:
-			print("Failed to grab webpage", url, attempts)
+		except Exception as e:
+			print("Failed to grab webpage", url, attempts, e)
 			attempts += 1
 	raise ValueError('Unable to fetch url')
 
@@ -319,7 +319,7 @@ async def postWebdata(self, url, data):
 	while attempts < 15:
 		try:
 			with async_timeout.timeout(15):
-				async with aiohttp.post(url, headers=headers, data=data) as r:
+				async with self.bot.SESSION.post(url, headers=headers, data=data) as r:
 					if r.status == 200:
 						return await r.text()
 					elif r.status == 404:
