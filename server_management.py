@@ -13,12 +13,11 @@ class ServerManagement():
 	async def banid(self, ctx, user_id : str):
 		"""Ban member from guild by their id"""
 		member = discord.Object(id=user_id)
-		member.server = discord.Object(id=ctx.message.server.id)
-		print(ctx.message.server.id, member.id, member.server)
+		member.guild = discord.Object(id=ctx.message.guild.id)
+		print(ctx.message.guild.id, member.id, member.guild)
 		try:
 			await self.bot.ban(member, delete_message_days=7)
 		except discord.HTTPException as e:
-		
 			print(e)
 		except discord.Forbidden as e:
 			print(e)
@@ -35,10 +34,10 @@ class ServerManagement():
 	async def unbanid(self, ctx, user_id : str):
 		"""Unban member from guild by their id"""
 		member = discord.Object(id=user_id)
-		member.server = discord.Object(id=ctx.message.server.id)
-		print(member.id, member.server)
+		member.guild = discord.Object(id=ctx.guild.id)
+		print(member.id, member.guild)
 		try:
-			await self.bot.unban(member.server, member)
+			await self.bot.unban(member.guild, member)
 		except discord.HTTPException as e:
 			print(e)
 		except discord.Forbidden as e:
