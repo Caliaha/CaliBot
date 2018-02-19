@@ -9,62 +9,62 @@ class Permissions():
 		self.commands = [ 'color', 'wow' ]
 		self.commandsRoleRestricted = [ 'color', 'set' ] # Fix this
 
-	@commands.command(pass_context=True, hidden = True)
+	@commands.command(hidden = True)
 	@commands.guild_only()
 	@superuser()
 	async def toggle(self, ctx, command: str):
 		if command not in self.commands:
-			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")
+			await ctx.send("I don't understand that command, please check your spelling. The options for this command are as follows: " + ', '.join(self.commands))
 			return False
 		
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-		serverID = ctx.message.server.id
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		guildID = ctx.guild.id
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
 				sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, [serverID, command])
+				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				disabled = 0
 				if result is not None:
 					if (result["disabled"] == 0):
 						disabled = 1
 					sql = "UPDATE `permissions` SET `disabled` = %s WHERE `serverID` = %s LIMIT 1"
-					cursor.execute(sql, (disabled, serverID))
+					cursor.execute(sql, (disabled, guildID))
 					connection.commit()
 				else:
-					sql = "INSERT INTO `permissions` (`serverID`, `command`, `disabled`) VALUES(%s, %s, %s)"
+					sql = "INSERT INTO `permissions` (`guildID`, `command`, `disabled`) VALUES(%s, %s, %s)"
 					disabled = 1
-					cursor.execute(sql, (serverID, command, disabled))
+					cursor.execute(sql, (guildID, command, disabled))
 					connection.commit()
 				if disabled:
-					await self.bot.send_message(ctx.message.channel, "Commands related to " + command + " have been disabled")
+					await ctx.send("Commands related to " + command + " have been disabled")
 				else:
-					await self.bot.send_message(ctx.message.channel, "Commands related to " + command + " have been enabled")
+					await ctx.send("Commands related to " + command + " have been enabled")
 		finally:
 			connection.close()
 		
-	@commands.command(pass_context=True, hidden = True)
+	@commands.command(hidden = True)
 	@commands.guild_only()
 	@superuser()
 	async def allow(self, ctx, command: str, role: discord.Role):
 		if command not in self.commandsRoleRestricted:
-			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")
+			await ctx.send("I don't understand that command, please check your spelling. The options for this command are as follows: " + ', '.join(self.commandsRoleRestricted))
 			return False
 		
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-		serverID = ctx.message.server.id
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		guildID = ctx.guild.id
 		print(role.name)
 		print(role.id)
 		roleID = role.name
 		if not role.name:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to get the role id, \@everyone and \@here is currently unsupported')
+			await self.ctx('I was unable to get the role id, \@everyone and \@here is currently unsupported')
 			return False
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, (serverID, command))
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
 					allowed_roles = result['allowed_roles'].split()
@@ -72,74 +72,74 @@ class Permissions():
 					if role.name not in allowed_roles:
 						allowed_roles.append(role.name)
 					else:
-						await self.bot.send_message(ctx.message.channel, role.name + ' has already been allowed to use the ' + command + ' command.')
+						await ctx.send(role.name + ' has already been allowed to use the ' + command + ' command.')
 						return False
 					allowed_roles = ' '.join(allowed_roles)
-					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
-					cursor.execute(sql, (allowed_roles, serverID, command))
+					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
+					cursor.execute(sql, (allowed_roles, guildID, command))
 					connection.commit()
 				else:
-					sql = "INSERT INTO `permissions` (`serverID`, `command`, `allowed_roles`) VALUES(%s, %s, %s)"
-					cursor.execute(sql, (serverID, command, role.name))
+					sql = "INSERT INTO `permissions` (`guildID`, `command`, `allowed_roles`) VALUES(%s, %s, %s)"
+					cursor.execute(sql, (guildID, command, role.name))
 					connection.commit()
-				await self.bot.send_message(ctx.message.channel, role.name + ' has been allowed to use the ' + command + ' command.')
+				await ctx.send(role.name + ' has been allowed to use the ' + command + ' command.')
 		finally:
 			connection.close()
 
-	@commands.command(pass_context=True, hidden = True)
+	@commands.command(hidden = True)
 	@commands.guild_only()
 	@superuser()
 	async def deny(self, ctx, command: str, role: discord.Role):
 		if command not in self.commandsRoleRestricted:
-			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")
+			await ctx.send("I don't understand that command, please check your spelling. The options for this command are as follows: " + ', '.join(self.commandsRoleRestricted))
 			return False
 		
-		connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-		serverID = ctx.message.server.id
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		guildID = ctx.guild.id
 		print(role.name)
 		print(role.id)
 		if not role.name:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to get the role id, \@everyone and \@here is currently unsupported')
+			await ctx.send('I was unable to get the role id, \@everyone and \@here is currently unsupported')
 			return False
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, (serverID, command))
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
 					allowed_roles = result['allowed_roles'].split()
 					if role.name in allowed_roles:
 						allowed_roles.remove(role.name)
 						allowed_roles = ' '.join(allowed_roles)
-						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
-						cursor.execute(sql, (allowed_roles, serverID, command))
+						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
+						cursor.execute(sql, (allowed_roles, guildID, command))
 						connection.commit()
-						await self.bot.send_message(ctx.message.channel, role.name + ' was removed form the list of allowed roles for ' + command + ' command.')
+						await ctx.send(role.name + ' was removed form the list of allowed roles for ' + command + ' command.')
 						return True
-				await self.bot.send_message(ctx.message.channel, role.name + ' was not found in the allowed roles for ' + command + ' command.')
+				await ctx.send(role.name + ' was not found in the allowed roles for ' + command + ' command.')
 				return False
 		finally:
 			connection.close()
 
-	@commands.command(pass_context=True, hidden = True)
+	@commands.command(hidden = True)
 	@commands.guild_only()
-	async def allowed(self, ctx, command: str):
+	async def allowed(self, ctx, command: str=''):
 		if command not in self.commandsRoleRestricted:
-			await self.bot.send_message(ctx.message.channel, "I don't understand that command, please check your spelling.")
+			await ctx.send("I don't understand that command, please check your spelling. The options for this command are as follows: " + ', '.join(self.commandsRoleRestricted))
 			return False
 		
-		serverID = ctx.message.server.id
+		guildID = ctx.guild.id
 		try:
-			connection = pymysql.connect(host='localhost', user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, (serverID, command))
+				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None and result['allowed_roles'] is not '':
-					await self.bot.send_message(ctx.message.channel, 'The following roles are allowed to use ' + command + ' command: ' + result['allowed_roles'])
+					await ctx.send('The following roles are allowed to use ' + command + ' command: ' + result['allowed_roles'])
 					return True
-				await self.bot.send_message(ctx.message.channel, 'No roles have been allowed to use the ' + command + ' command on this server.')
+				await ctx.send('No roles have been allowed to use the ' + command + ' command on this server.')
 				return False
 		finally:
 			connection.close()

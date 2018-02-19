@@ -31,6 +31,12 @@ startup_extensions = [ 'announce', 'color', 'hots', 'osu', 'permissions', 'serve
 async def on_ready():
 	print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
 
+#@bot.event
+#async def on_command_error(ctx, error):
+#	print('Beep')
+#	print(ctx.message.author.name)
+#	ctx.send('Beep')
+
 if __name__ == "__main__":
 	#bot.load_extension('announce')
 	for extension in startup_extensions:

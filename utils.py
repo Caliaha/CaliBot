@@ -46,7 +46,7 @@ class utils():
 		await ctx.send(self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
 		await ctx.send('Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@isBotOwner()
 	async def load(self, ctx, extension_name : str):
 		"""Loads an extension."""
@@ -57,14 +57,14 @@ class utils():
 			return
 		await ctx.send("{} loaded.".format(extension_name))
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@isBotOwner()
 	async def unload(self, ctx, extension_name : str):
 		"""Unloads an extension."""
 		self.bot.unload_extension(extension_name)
 		await ctx.send("{} unloaded.".format(extension_name))
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@isBotOwner()
 	async def reload(self, ctx, extension_name : str):
 		"""Unloads and then loads an extension."""
