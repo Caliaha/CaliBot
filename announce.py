@@ -317,8 +317,8 @@ class Announce():
 						#await self.bot.move_member(member, destinationChannel)
 						await member.move_to(destinationChannel, reason='Deathgripped')
 						print("Moving {} to {}".format(member.name, destinationChannel.name))
-					except:
-						print("Failed moving {} to {}".format(member.name, destinationChannel.name))
+					except Exception as e:
+						print("Failed moving {} to {}".format(member.name, destinationChannel.name), e)
 				print(count, count2)
 		#try:
 			#pass

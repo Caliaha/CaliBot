@@ -6,7 +6,7 @@ class ServerManagement():
 	def __init__(self, bot):
 		self.bot = bot
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	@commands.guild_only()
 	@superuser()
@@ -26,7 +26,7 @@ class ServerManagement():
 			return True
 		return False
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	@commands.guild_only()
 	@superuser()
