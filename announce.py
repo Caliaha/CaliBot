@@ -300,7 +300,7 @@ class Announce():
 
 		self.paused = True
 		for channel in ctx.message.guild.voice_channels:
-			if (channel != destinationChannel and channel.id not in ignored_channels):
+			if (channel != destinationChannel and str(channel.id) not in ignored_channels):
 				print(channel)
 				listToMove = []
 				count = 0
