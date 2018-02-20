@@ -317,8 +317,16 @@ class Announce():
 						#await self.bot.move_member(member, destinationChannel)
 						await member.move_to(destinationChannel, reason='Deathgripped')
 						print("Moving {} to {}".format(member.name, destinationChannel.name))
+					except discord.Forbidden as e:
+						print("Missing permissions to move {} to {}".format(member.name, destinationChannel.name), e)
+					except discord.HTTPException as e:
+						print("HTTPEXception Moving {} to {}".format(member.name, destinationChannel.name, e))
 					except Exception as e:
 						print("Failed moving {} to {}".format(member.name, destinationChannel.name), e)
+					except:
+						print("Normal except Failed moving {} to {}".format(member.name, destinationChannel.name))
+					else:
+						print("No error")
 				print(count, count2)
 		#try:
 			#pass
