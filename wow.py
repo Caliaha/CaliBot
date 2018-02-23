@@ -829,7 +829,7 @@ class WoW():
 			realm = None
 		
 		
-		if (len(args) == 0 and ctx.message.server is not None):
+		if (len(args) == 0 and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
 		await ctx.trigger_typing()
