@@ -75,7 +75,7 @@ class Permissions():
 						await ctx.send(role.name + ' has already been allowed to use the ' + command + ' command.')
 						return False
 					allowed_roles = ' '.join(allowed_roles)
-					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
+					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
 					cursor.execute(sql, (allowed_roles, guildID, command))
 					connection.commit()
 				else:
