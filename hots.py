@@ -10,11 +10,11 @@ class HOTS():
 	@commands.command(pass_context=True)
 	async def hots(self, ctx):
 		"""Show weekly Heroes of the Storm free-to-play rotation"""
-		await self.bot.send_typing(ctx.message.channel)
+		await ctx.trigger_typing()
 		try:
 			page = await fetchWebpage(self, 'https://us.battle.net/heroes/en/')
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to access https://us.battle.net/heroes/en/')
+			await ctx.send('I was unable to access https://us.battle.net/heroes/en/')
 			return False
 			
 		heroes = []
@@ -29,13 +29,13 @@ class HOTS():
 								heroes.append(a.get('data-analytics-placement').capitalize())
 								print(a.get('data-analytics-placement').capitalize())
 		except:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to parse the html or something')
+			await ctx.send('I was unable to parse the html or something')
 			return False
 
 		if heroes:
-			await self.bot.send_message(ctx.message.channel, 'Current Heroes of the Storm Free-to-Play Rotation:\n' + ', '.join(str(hero) for hero in heroes))
+			await ctx.send('Current Heroes of the Storm Free-to-Play Rotation:\n' + ', '.join(str(hero) for hero in heroes))
 		else:
-			await self.bot.send_message(ctx.message.channel, 'I was unable to find any heroes, what\'s up with that?')
+			await ctx.send('I was unable to find any heroes, what\'s up with that?')
 
 		#embed=discord.Embed(title='Test', description='Beep', url='https://www.google.com', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 

@@ -10,7 +10,7 @@ class osu():
 	def __init__(self, bot):
 		self.bot = bot
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	async def osu(self, ctx, user=None):
 		"""Look up osu! player profile"""
 		if user is None or ctx.message.author.guild.get_member_named(user):
