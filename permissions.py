@@ -23,7 +23,7 @@ class Permissions():
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
 				sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, (guildID, command))
+				cursor.execute(sql, (sID, command))
 				result = cursor.fetchone()
 				disabled = 0
 				if result is not None:
@@ -63,7 +63,7 @@ class Permissions():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
 				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
@@ -104,7 +104,7 @@ class Permissions():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
 				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
@@ -112,7 +112,7 @@ class Permissions():
 					if role.name in allowed_roles:
 						allowed_roles.remove(role.name)
 						allowed_roles = ' '.join(allowed_roles)
-						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
+						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
 						cursor.execute(sql, (allowed_roles, guildID, command))
 						connection.commit()
 						await ctx.send(role.name + ' was removed form the list of allowed roles for ' + command + ' command.')
