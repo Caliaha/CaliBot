@@ -120,9 +120,13 @@ class Announce():
 		if voiceBefore is self.VOICE_CHANNELS[guild.id].channel and voiceAfter is not self.VOICE_CHANNELS[guild.id].channel:
 			tts = { }
 			tts["name"] = member.nick or member.name
-			tts["action"] = 'Leave'
-			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has left."
 			tts["guild"] = guild
+			if voiceAfter.name == "afk":
+				tts["action"] = 'AFK'
+				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has gone a f k."
+			else:
+				tts["action"] = 'Leave'
+				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has left."
 			print(member.name, 'has left the channel')
 			await self.queue.put(tts)
 			return
