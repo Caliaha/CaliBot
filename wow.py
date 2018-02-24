@@ -110,7 +110,7 @@ class WoW():
 		
 		return urllib.parse.quote_plus(characterName[1]), urllib.parse.quote_plus(realm.replace(" ","-"))
 
-	@commands.command(pass_context=True, description='Show weekly mythic+ affixes as shown on wowhead.com')
+	@commands.command()
 	@doThumbs()
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
@@ -166,7 +166,7 @@ class WoW():
 		else:
 			return False
 
-	@commands.command(pass_context=True, description='Set default character/realm combo for WoW commands')
+	@commands.command(description='Set default character/realm combo for WoW commands')
 	async def setmain(self, ctx, *, toon: str):
 		"""Set your default character to be used by other commands"""
 		await ctx.trigger_typing()
@@ -195,7 +195,7 @@ class WoW():
 		finally:
 			connection.close()
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
@@ -262,7 +262,7 @@ class WoW():
 					checkStatus = False
 					print("breaking from checkStatus because: " + status['batchInfo']['status'])
 				#print(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities'])
-				await asyncio.sleep(1)
+				await asyncio.sleep(0.4)
 			print("Done requesting update from raider.io")
 			await ctx.trigger_typing()
 			await asyncio.sleep(6) # Just in case website still needs a little time to update things
@@ -322,7 +322,7 @@ class WoW():
 		#	print("Failed to request raider.io guild update")
 		return True
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def wp(self, ctx, *, toon = '*'):
 		"""Mythic+ completion rates as shown on wowprogress.com"""
@@ -460,7 +460,7 @@ class WoW():
 		else:
 			return False
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def logs(self, ctx, *, toon = "*"):
 		"""Shows basic warcraft logs summary"""
@@ -566,7 +566,7 @@ class WoW():
 			await ctx.send('No warcraftlogs data found or bad regex')
 			return False
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def wowtoken(self, ctx):
 		"""Show current wow token price"""
@@ -591,7 +591,7 @@ class WoW():
 			await ctx.send('Failed to parse out wowtoken pricing information')
 			return False
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@superuser()
 	@commands.guild_only()
 	async def defaultguild(self, ctx, *args):
@@ -607,30 +607,30 @@ class WoW():
 			update = False
   
   
-		serverid = ctx.message.server.id
-		print(serverid)
+		guildID = ctx.guild.id
+		print(guildID)
 
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
-				cursor.execute(sql, (serverid))
+				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `guildID`=%s"
+				cursor.execute(sql, (guildID))
 				result = cursor.fetchone()
 				if update is False and result is not None:
-					await ctx.send('Currently the guild and realm for ' + ctx.message.server.name + ' is set to <' + result['guild'] + '> on ' + result['realm'])
-				print(serverid, result)
+					await ctx.send('Currently the guild and realm for ' + ctx.guild.name + ' is set to <' + result['guild'] + '> on ' + result['realm'])
+				print(guildID, result)
 				if update is True:
 					if result is None:
-						sql = "INSERT INTO `guild_defaults` (`serverid`, `guild`, `realm`) VALUES(%s, %s, %s)"
-						cursor.execute(sql, (serverid, guild, realm))
+						sql = "INSERT INTO `guild_defaults` (`guildID`, `guild`, `realm`) VALUES(%s, %s, %s)"
+						cursor.execute(sql, (guildID, guild, realm))
 						connection.commit()
 					else:
-						sql = "UPDATE `guild_defaults` SET `guild` = %s, `realm` = %s WHERE `serverid` = %s LIMIT 1"
-						cursor.execute(sql, (guild, realm, serverid))
+						sql = "UPDATE `guild_defaults` SET `guild` = %s, `realm` = %s WHERE `guildID` = %s LIMIT 1"
+						cursor.execute(sql, (guild, realm, guildID))
 						connection.commit()
 						#print(result)
-					await ctx.send('The default guild and realm for ' + ctx.message.server.name + ' has been set to <' + guild + '> on ' + realm) 
+					await ctx.send('The default guild and realm for ' + ctx.guild.name + ' has been set to <' + guild + '> on ' + realm) 
 		finally:
 			connection.close()
 
@@ -662,7 +662,7 @@ class WoW():
 			
 		return attendance
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def guildperf(self, ctx, *args):
 		"""Shows performance data for guild"""
@@ -798,14 +798,14 @@ class WoW():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `serverid`=%s"
+				sql = "SELECT `guild`, `realm` FROM `guild_defaults` WHERE `guildID`=%s"
 				cursor.execute(sql, (ctx.guild.id))
 				result = cursor.fetchone()
 				print(result)
 				if result is not None:
 					guild = result["guild"]
 					realm = result["realm"]
-					updateableMessage = await ctx.send('Using <' + guild + '> on ' + realm + ' for server ' + ctx.guild.name)
+					updateableMessage = await ctx.send('Using <' + guild + '> on ' + realm + ' for guild ' + ctx.guild.name)
 					return guild, realm, updateableMessage
 		except:
 			print("Database lookup failed fetchGuildFromDB")
@@ -814,7 +814,7 @@ class WoW():
 
 		return None, None, None
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def linklogs(self, ctx, *args):
 		"""Shows links to the latest warcraft logs for the guild"""
@@ -891,7 +891,7 @@ class WoW():
 			if (count > 5):
 				break
 
-		embed=discord.Embed(title='Lastest log reports for <' + guild + '>', description=reportData, url='https://www.warcraftlogs.com/guilds/reportslist/' + guildID + '/', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed=discord.Embed(title='Latest log reports for <' + guild + '>', description=reportData, url='https://www.warcraftlogs.com/guilds/reportslist/' + guildID + '/', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 		embed.set_thumbnail(url='https://www.warcraftlogs.com/img/common/warcraft-logo.png')
 		embed.set_footer(text='Git Gud, Scrubs!', icon_url='https://wowanalyzer.com/favicon.png')
 
@@ -904,7 +904,7 @@ class WoW():
 			return False
 		return True
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def allstars(self, ctx, *args):
 		"""Shows guild allstars performance and realm rankings"""
@@ -1072,7 +1072,7 @@ class WoW():
 					count += 1
 		return count
 	
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def gear(self, ctx, *, toon = '*'):
 		"""Shows current equipped gear and basic gem/enchant check"""
@@ -1223,7 +1223,7 @@ class WoW():
 			await ctx.send(msg)
 		return True
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@doThumbs()
 	async def armory(self, ctx, *, toon = '*'):
 		"""Shows item level and progression info"""

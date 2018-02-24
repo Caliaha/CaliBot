@@ -25,7 +25,7 @@ bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
 
-startup_extensions = [ 'announce', 'color', 'hots', 'osu', 'permissions', 'server_management', 'settings', 'tf2', 'utils', 'wow', 'wowtoken' ]
+startup_extensions = [ 'announce', 'color', 'hots', 'osu', 'permissions', 'guild_management', 'settings', 'tf2', 'utils', 'wow', 'wowtoken' ]
 
 @bot.event
 async def on_ready():

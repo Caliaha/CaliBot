@@ -22,14 +22,14 @@ class Permissions():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
-				cursor.execute(sql, (sID, command))
+				sql = "SELECT `disabled` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				disabled = 0
 				if result is not None:
 					if (result["disabled"] == 0):
 						disabled = 1
-					sql = "UPDATE `permissions` SET `disabled` = %s WHERE `serverID` = %s LIMIT 1"
+					sql = "UPDATE `permissions` SET `disabled` = %s WHERE `guildID` = %s LIMIT 1"
 					cursor.execute(sql, (disabled, guildID))
 					connection.commit()
 				else:
@@ -63,19 +63,19 @@ class Permissions():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
 				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
-					allowed_roles = result['allowed_roles'].split()
+					allowed_roles = result['allowed_roles'].split(',')
 					print(len(allowed_roles), allowed_roles)
 					if role.name not in allowed_roles:
 						allowed_roles.append(role.name)
 					else:
 						await ctx.send(role.name + ' has already been allowed to use the ' + command + ' command.')
 						return False
-					allowed_roles = ' '.join(allowed_roles)
-					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
+					allowed_roles = ','.join(allowed_roles)
+					sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
 					cursor.execute(sql, (allowed_roles, guildID, command))
 					connection.commit()
 				else:
@@ -104,15 +104,15 @@ class Permissions():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
 				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None:
-					allowed_roles = result['allowed_roles'].split()
+					allowed_roles = result['allowed_roles'].split(',')
 					if role.name in allowed_roles:
 						allowed_roles.remove(role.name)
-						allowed_roles = ' '.join(allowed_roles)
-						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `serverID` = %s AND `command`=%s LIMIT 1"
+						allowed_roles = ','.join(allowed_roles)
+						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
 						cursor.execute(sql, (allowed_roles, guildID, command))
 						connection.commit()
 						await ctx.send(role.name + ' was removed form the list of allowed roles for ' + command + ' command.')
@@ -133,13 +133,13 @@ class Permissions():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+				sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
 				cursor.execute(sql, (guildID, command))
 				result = cursor.fetchone()
 				if result is not None and result['allowed_roles'] is not '':
-					await ctx.send('The following roles are allowed to use ' + command + ' command: ' + result['allowed_roles'])
+					await ctx.send('The following roles are allowed to use ' + command + ' command: ' + ', '.join(result['allowed_roles'].split(',')))
 					return True
-				await ctx.send('No roles have been allowed to use the ' + command + ' command on this server.')
+				await ctx.send('No roles have been allowed to use the ' + command + ' command on this guild.')
 				return False
 		finally:
 			connection.close()

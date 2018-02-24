@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from stuff import doThumbs, superuser
 
-class ServerManagement():
+class GuildManagement():
 	def __init__(self, bot):
 		self.bot = bot
 
@@ -47,4 +47,4 @@ class ServerManagement():
 		return False
 
 def setup(bot):
-	bot.add_cog(ServerManagement(bot))
+	bot.add_cog(GuildManagement(bot))

@@ -30,7 +30,7 @@ def checkPermissions(command):
 			guildID = ctx.guild.id
 			try:
 				with connection.cursor() as cursor:
-					sql = "SELECT `disabled` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+					sql = "SELECT `disabled` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
 					cursor.execute(sql, (guildID, command))
 					print(guildID, command)
 					result = cursor.fetchone()
@@ -47,11 +47,11 @@ def checkPermissions(command):
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			try:
 				with connection.cursor() as cursor:
-					sql = "SELECT `allowed_roles` FROM `permissions` WHERE `serverID`=%s AND `command`=%s"
+					sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
 					cursor.execute(sql, (guildID, command))
 					result = cursor.fetchone()
 					if result is not None:
-						allowed_roles = result['allowed_roles'].split()
+						allowed_roles = result['allowed_roles'].split(',')
 						for role in ctx.message.author.roles:
 							if role.name in allowed_roles:
 								print(ctx.message.author.name, 'was allowed to use', command, 'on guild', guildID)

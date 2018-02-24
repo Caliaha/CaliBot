@@ -132,7 +132,7 @@ class Announce():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "DELETE FROM `voice_status` WHERE `server`=%s"
+				sql = "DELETE FROM `voice_status` WHERE `guildID`=%s"
 				cursor.execute(sql, (str(guildID)))
 				connection.commit()
 		except:
@@ -145,7 +145,7 @@ class Announce():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "INSERT INTO `voice_status` (`server`, `channel`) VALUES(%s, %s)"
+				sql = "INSERT INTO `voice_status` (`guildID`, `channel`) VALUES(%s, %s)"
 				cursor.execute(sql, (str(guildID), str(channelID))) # FIX THIS str
 				connection.commit()
 		except Exception as e:
@@ -165,17 +165,17 @@ class Announce():
 		
 		return voice or None
 
-	async def leaveVoiceChannel(self, serverID, channel):
+	async def leaveVoiceChannel(self, guildID, channel):
 		try:
-			await self.VOICE_CHANNELS[serverID].disconnect()
+			await self.VOICE_CHANNELS[guildID].disconnect()
 		except:
 			print("ERROR: Failed to disconnect from voice in leaveVoiceChannel()")
 		try:
-			del self.VOICE_CHANNELS[serverID]
+			del self.VOICE_CHANNELS[guildID]
 		except:
-			print("ERROR: Failed to remove server from VOICE_CHANNELS in leaveVoiceChannel()")
+			print("ERROR: Failed to remove guild from VOICE_CHANNELS in leaveVoiceChannel()")
 
-		await self.removeFromDB(serverID, channel)
+		await self.removeFromDB(guildID, channel)
 
 	async def joinOrMove(self, ctx):
 		channel = ctx.message.author.voice.channel
@@ -197,12 +197,12 @@ class Announce():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "SELECT `server`, `channel` FROM `voice_status`"
+				sql = "SELECT `guildID`, `channel` FROM `voice_status`"
 				cursor.execute(sql)
 				results = cursor.fetchall()
 				for result in results:
-					print(result['server'], result['channel'])
-					guild = self.bot.get_guild(int(result['server'])) # Fix me, change these to ints in the database later
+					print(result['guildID'], result['channel'])
+					guild = self.bot.get_guild(int(result['guildID'])) # Fix me, change these to ints in the database later
 					channel = self.bot.get_channel(int(result['channel']))
 					print(guild, channel)
 					if guild and channel:
@@ -267,8 +267,8 @@ class Announce():
 			message2.addRow( [ key.guild, key.guild.id, key.channel, key.channel.id, key.is_connected() ] )
 			#print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
 
-		message.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
-		message2.setHeader( [ 'Server', 'Server ID', 'Channel', 'Channel ID', 'Conn' ] )
+		message.setHeader( [ 'Guild', 'Guild ID', 'Channel', 'Channel ID', 'Conn' ] )
+		message2.setHeader( [ 'Guild', 'Guild ID', 'Channel', 'Channel ID', 'Conn' ] )
 		
 		await ctx.send('```' + message.box() + '```')
 		await ctx.send('```' + message2.box() + '```')
@@ -290,11 +290,12 @@ class Announce():
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `guildID`=%s"
 				cursor.execute(sql, (ctx.message.guild.id))
 				result = cursor.fetchone()
 				if result is not None:
-					ignored_channels = result['mdg_ignore'].split()
+					if result['mdg_ignore'] is not None:
+						ignored_channels = result['mdg_ignore'].split()
 		finally:
 			connection.close()
 
@@ -356,7 +357,7 @@ class Announce():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `guildID`=%s"
 				cursor.execute(sql, (ctx.guild.id))
 				result = cursor.fetchone()
 				if result is not None:
@@ -374,11 +375,11 @@ class Announce():
 						await ctx.send(channel.name + ' has already been added to the !mdg ignore list.')
 						return False
 					mdg_ignore = ' '.join(mdg_ignore)
-					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `serverID` = %s LIMIT 1"
+					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `guildID` = %s LIMIT 1"
 					cursor.execute(sql, (mdg_ignore, ctx.message.guild.id))
 					connection.commit()
 				elif channel is not None:
-					sql = "INSERT INTO `guild_defaults` (`serverID`, `mdg_ignore`) VALUES(%s, %s)"
+					sql = "INSERT INTO `guild_defaults` (`guildID`, `mdg_ignore`) VALUES(%s, %s)"
 					cursor.execute(sql, (ctx.message.guild.id, channel.id))
 					connection.commit()
 				else:
@@ -406,7 +407,7 @@ class Announce():
 		try:
 			with connection.cursor() as cursor:
 				#Check if entry exists then update or create one
-				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `serverID`=%s"
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `guildID`=%s"
 				cursor.execute(sql, (ctx.guild.id))
 				result = cursor.fetchone()
 				if result is not None:
@@ -422,7 +423,7 @@ class Announce():
 						await ctx.send(channel.name + ' was not in the !mdg ignore list.')
 						return False
 					mdg_ignore = ' '.join(mdg_ignore)
-					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `serverID` = %s LIMIT 1"
+					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `guildID` = %s LIMIT 1"
 					cursor.execute(sql, (mdg_ignore, ctx.guild.id))
 					connection.commit()
 				await ctx.send(channel.name + ' has been removed to the !mdg ignore list.')
