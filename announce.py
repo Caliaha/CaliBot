@@ -121,7 +121,7 @@ class Announce():
 			tts = { }
 			tts["name"] = member.nick or member.name
 			tts["guild"] = guild
-			if voiceAfter.name == "afk":
+			if voiceAfter is not None and voiceAfter.name == "afk":
 				tts["action"] = 'AFK'
 				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has gone a f k."
 			else:
