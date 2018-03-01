@@ -15,7 +15,7 @@ class Announce():
 		self.file = '-w=' + self.bot.TTS_FILE
 		self.paused = False
 
-	async def checkIfConnected(self):
+	async def checkIfConnected(self): # Redo this or something; this only checks actual voice; not if we believe we are in a voice channel but aren't
 		for voice in self.bot.voice_clients:
 			if voice.guild.id not in self.VOICE_CHANNELS:
 				self.VOICE_CHANNELS[voice.guild.id] = voice
@@ -51,6 +51,13 @@ class Announce():
 				
 				if (not voice.is_connected()):
 					print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
+					# Add reconnect logic here
+					if guild.id in self.VOICE_CHANNELS:
+						await self.joinVoiceChannel(guild.id, self.VOICE_CHANNELS[guild.id].channel)
+					else:
+						print("Bot is disconnected from voice and is unable to reconnect, removing from self.VOICE_CHANNELS")
+						print(guild.name, guild.id)
+						self.VOICE_CHANNELS.remove(guild.id)
 				else:
 					try:
 						voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
@@ -95,8 +102,9 @@ class Announce():
 			return
 
 		try:
-			if member.name == self.bot.NAME and after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
-				await self.updateDB(member.guild.id, after.channel.id)
+			if member.name == self.bot.NAME
+				if after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
+					await self.updateDB(member.guild.id, after.channel.id)
 				return
 		except:
 			print('Error adding ourselves to db or something weird')
