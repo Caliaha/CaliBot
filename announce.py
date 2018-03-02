@@ -247,7 +247,7 @@ class Announce():
 
 	@commands.command(pass_context=True)
 	@commands.guild_only()
-	@superuser()
+	@checkPermissions('voice')
 	async def forcereconnect(self, ctx):
 		"""Bot attempts to leave and rejoin channel"""
 		await ctx.send('I will attempt to disconnect and rejoin the voice channel, this may not work.')
