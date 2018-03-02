@@ -1,6 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-from stuff import isBotOwner, superuser
+from stuff import checkPermissions, isBotOwner, superuser
 import sys
 import time
 import uptime
@@ -32,7 +32,7 @@ class utils():
 		await ctx.send(ctx.message.guild.owner)
 
 	@commands.command()
-	@superuser()
+	@checkPermissions('utils')
 	async def restart(self, ctx):
 		"""Restarts CaliBot, guild owner only"""
 		await ctx.message.channel.send('I am restarting. It will take me a moment to reconnect')

@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import BoxIt, cleanUserInput, doThumbs, isBotOwner, superuser
+from stuff import BoxIt, checkPermissions, cleanUserInput, doThumbs, isBotOwner, superuser
 from subprocess import Popen, PIPE
 
 class Announce():
@@ -98,16 +98,15 @@ class Announce():
 
 	async def on_voice_state_update(self, member, before, after):
 		print("VOICE_STATE_UPDATE", member.guild.id, after.channel)
-		if self.paused:
-			return
-
 		try:
-			if member.name == self.bot.NAME
+			if member.name == self.bot.NAME:
 				if after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
 					await self.updateDB(member.guild.id, after.channel.id)
 				return
 		except:
 			print('Error adding ourselves to db or something weird')
+		if self.paused:
+			return
 		guild = member.guild
 		voiceBefore = before.channel
 		voiceAfter = after.channel
@@ -264,7 +263,7 @@ class Announce():
 			except:
 				print("ERROR: Failed to join voice channel in forcereconnect()")
 
-	@commands.command(pass_context=True, hidden=True)
+	@commands.command(hidden=True)
 	@isBotOwner()
 	async def debugannounce(self, ctx):
 		message = BoxIt()
@@ -289,7 +288,7 @@ class Announce():
 
 	@commands.command()
 	@commands.guild_only()
-	@superuser()
+	@checkPermissions('voice')
 	@doThumbs()
 	async def mdg(self, ctx):
 		"""Moves everyone to your voice channel"""
@@ -352,9 +351,9 @@ class Announce():
 		self.paused = False
 		return True
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@commands.guild_only()
-	@superuser()
+	@checkPermissions('voice')
 	@doThumbs()
 	async def mdgignore(self, ctx, channel : discord.VoiceChannel = None):
 		"""Adds channel to ignore list, bot will not pull members from this channel"""
@@ -403,9 +402,9 @@ class Announce():
 			connection.close()
 		return True
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@commands.guild_only()
-	@superuser()
+	@checkPermissions('voice')
 	@doThumbs()
 	async def mdgunignore(self, ctx, channel : discord.VoiceChannel):
 		"""Adds channel to ignore list, bot will not pull members from this channel"""
