@@ -207,8 +207,23 @@ class WoW():
 			realm = args[1]
 		except:
 			realm = "Cairne"
+		
+		fullWait = False
+		fullWaitWarning = ''
+		if guild is '*':
+			guild = None
+			fullWait = True
+			fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
+		
+		try:
+			doWait = args[0]
+			if doWait is '*':
+				fullWait = True
+				fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
+		except:
+			pass
 
-		if (len(args) == 0 and ctx.guild is not None):
+		if (len(args) <= 1 and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
 		await ctx.trigger_typing()
@@ -244,10 +259,10 @@ class WoW():
 		try:
 			updateableMessage
 		except:
-			updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm)
+			updateableMessage = await ctx.send(fullWaitWarning + 'Performing lookup for <' + guild + '> on ' + realm)
 
 		try:
-			await updateableMessage.edit(content='Attempting to update website before I request the data Status: Unknown Currently Processing: 0/0', delete_after=60)
+			await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data Status: Unknown Currently Processing: 0/0')
 
 			data = { 'realmId': guildData['data']['realm']['id'], 'realm': guildData['data']['realm']['name'], 'region': guildData['data']['region']['slug'], 'guild': guildData['data']['name'], 'numMembers': 50 }
 
@@ -257,8 +272,19 @@ class WoW():
 			startTime = time.time()
 			while checkStatus:
 				status = json.loads(await fetchWebpage(self, 'https://raider.io/api/crawler/monitor?batchId=' + postJSON['jobData']['batchId']))
-				await updateableMessage.edit(content='Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\nStatus: {} Currently Processing: {}/{}'.format((startTime + 60 - time.time()), status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']), delete_after=60)
-				if ((status['batchInfo']['status'] != 'waiting' and status['batchInfo']['status'] != 'active')) or startTime + 60 < time.time():
+				try:
+					if int(status['batchInfo']['jobs'][0]['positionInQueue']) > 0:
+						queueStatus = 'Queue: {} out of {}\n'.format(status['batchInfo']['jobs'][0]['positionInQueue'], status['batchInfo']['jobs'][0]['totalItemsInQueue'])
+					else:
+						queueStatus = ''
+					await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\n'.format((startTime + 120 - time.time())) + queueStatus + 'Status: {} Currently Processing: {}/{}'.format(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+				except Exception as e:
+					print("Could not update !mythic updateable message", e)
+				if  startTime + 120 < time.time():
+					if not fullWait:
+						checkStatus = False
+						print("breaking from checkStatus because alotted time ran out")
+				if ((status['batchInfo']['status'] != 'waiting' and status['batchInfo']['status'] != 'active')):
 					checkStatus = False
 					print("breaking from checkStatus because: " + status['batchInfo']['status'])
 				#print(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities'])
@@ -267,7 +293,10 @@ class WoW():
 			await ctx.trigger_typing()
 			await asyncio.sleep(6) # Just in case website still needs a little time to update things
 		except:
-			await updateableMessage.edit(content='Attempting to update website before I request the data\nStatus: Failed', delete_after=60)
+			try:
+				await updateableMessage.edit(content='Attempting to update website before I request the data\nStatus: Failed\nRaider.io will process the update at some point in the future but I am not waiting for it\nWill use older information', delete_after=60)
+			except Exception as e:
+				print("Could not update !mythic updateable message", e)
 			print("Failed to request raider.io guild update")
 
 		try:
@@ -276,7 +305,7 @@ class WoW():
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
-			await self.bot.delete_message(updateableMessage)
+			await updateableMessage.delete()
 			return False
 
 		try:
@@ -320,6 +349,10 @@ class WoW():
 		#	print("Done requesting update from raider.io")
 		#except:
 		#	print("Failed to request raider.io guild update")
+		try:
+			await updateableMessage.delete()
+		except:
+			print("Could not delete !mythic updateable message")
 		return True
 
 	@commands.command()
