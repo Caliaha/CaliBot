@@ -88,7 +88,7 @@ class utils():
 	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
-	async def eval(self, ctx, code : str):
+	async def eval(self, ctx, *, code : str):
 		try:
 			await ctx.send(eval(code))
 		except Exception as e:
