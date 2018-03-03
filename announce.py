@@ -97,7 +97,7 @@ class Announce():
 			return cleanUserInput(member.name)
 
 	async def on_voice_state_update(self, member, before, after):
-		print("VOICE_STATE_UPDATE", member.guild.id, after.channel)
+		print("VOICE_STATE_UPDATE", member.name, member.guild.name, after.channel)
 		try:
 			if member.name == self.bot.NAME:
 				if after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
@@ -112,7 +112,7 @@ class Announce():
 		voiceAfter = after.channel
 		if (before.channel == after.channel):
 			print("The before and after channels were the same, weird")
-		await self.checkIfConnected()
+		#await self.checkIfConnected()
 		if (guild.id not in self.VOICE_CHANNELS):
 			return
 		if voiceBefore is not self.VOICE_CHANNELS[guild.id].channel and voiceAfter is self.VOICE_CHANNELS[guild.id].channel:
