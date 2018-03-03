@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import pymysql.cursors
 import re
-from stuff import checkPermissions, doThumbs
+from stuff import checkPermission, checkPermissions, doThumbs, superuser
 
 '''
 Add these at some point to remove color role when a person leaves the guild
@@ -20,30 +20,64 @@ class RoleColor():
 		regex = re.compile("^[0-9a-fA-F]{6}$")
 		return True if regex.match(hex) is not None else False
 
-	@commands.command(pass_context=True)
+		async def bulk_remove(): # Later make this check and make sure that everyone who has a color role is still present in the guild
+			pass
+
+		async def on_ready(self):
+			await self.bulk_remove()
+
+	@commands.command()
+	@commands.guild_only()
+	@superuser()
+	@doThumbs()
+	async def removeallcolors(self, ctx, confirm=None):
+		regex =re.compile("^Color: \d{18}$")
+		rolesToDelete = []
+		for role in ctx.guild.roles:
+			if regex.match(role.name):
+				rolesToDelete.append(role)
+				print(role.name, 'is a color role')
+		if confirm=='confirm':
+			for role in rolesToDelete:
+				try:
+					await role.delete(reason='!removeallcolors requested by {}'.format(ctx.author.name))
+				except:
+					print("Failed to delete role")
+		else:
+			await ctx.send('The following will be deleted when this command is rerun as *!removeallcolors confirm*:\n' + ', '.join(role.name for role in rolesToDelete))
+		return True
+
+	@commands.command()
 	@commands.guild_only()
 	@doThumbs()
 	@checkPermissions('color')
-	async def removecolor(self, ctx):
-		memberid = ctx.message.author.id
-		if memberid is None:
+	async def removecolor(self, ctx, otherMember: discord.Member=None):
+		if otherMember is not None:
+			if await checkPermission(self, ctx, 'set') is True:
+				member = otherMember
+			else:
+				await ctx.send("You don't have permission to use this command in this manner")
+				return False
+		else:
+			member = ctx.message.author
+		if member.id is None:
 			await ctx.send('I was unable to get your memberid, this is a bug')
 			return False
-		colorrole = "Color: " + str(memberid)
-		print(ctx.message.author.id)
+		colorrole = "Color: " + str(member.id)
+		print('Deleting role for {} on behalf of {}.'.format(member.name, ctx.author.name))
 		role = discord.utils.get(ctx.message.guild.roles, name=colorrole)
 		try:
-			await role.delete(reason='CaliBot !removecolor')
+			await role.delete(reason='CaliBot !removecolor on behalf of {}'.format(ctx.author.name))
 			return True
 		except Exception as e:
 			print(e)
 			return False
 
-	@commands.command(pass_context=True)
+	@commands.command()
 	@commands.guild_only()
 	@doThumbs()
 	@checkPermissions('color')
-	async def colorme(self, ctx, *, colorcode: str):
+	async def colorme(self, ctx, colorcode: str, otherMember: discord.Member=None):
 		newcolor = None
 		colorcode = colorcode.lower()
 		print(colorcode)
@@ -57,13 +91,24 @@ class RoleColor():
 
 		if newcolor is None:
 			return False
-		
-		memberid = ctx.message.author.id
-		if memberid is None:
+
+		if otherMember is not None:
+			if await checkPermission(self, ctx, 'set') is True:
+				if otherMember == ctx.guild.me:
+					await ctx.send('I cannot color myself')
+					return False
+				member = otherMember
+				print('I am coloring {} on behalf of {}'.format(ctx.author.name, member.name))
+			else:
+				await ctx.send("You don't have permission to use this command in this manner")
+				return False
+		else:
+			member = ctx.author
+		if ctx.author.id is None:
 			await ctx.send('I was unable to get your memberid, this is a bug')
 			return False
-		colorrole = "Color: " + str(memberid)
-		print(ctx.message.author.id)
+		colorrole = "Color: " + str(member.id)
+		print(member.id)
 		role = discord.utils.get(ctx.message.guild.roles, name=colorrole)
 		botrole = discord.utils.get(ctx.message.guild.roles, name=self.bot.NAME)
 		if botrole is None:
@@ -74,7 +119,7 @@ class RoleColor():
 			print(botrole)
 		failed = False
 		if role:
-			print("Changing color for", ctx.message.author.name, "with role", role, "to", newcolor)
+			print("Changing color for", member.name, "with role", role, "to", newcolor)
 			try:
 				#await self.bot.edit_role(ctx.message.server, role, name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
 				await role.edit(name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
@@ -93,7 +138,7 @@ class RoleColor():
 			
 		try:
 			#await self.bot.add_roles(ctx.message.author, role)
-			await ctx.message.author.add_roles(role, reason = 'CaliBot !colorme', atomic=True)
+			await member.add_roles(role, reason = 'CaliBot !colorme', atomic=True)
 		except:
 			failed = True
 			print("Failed to add role to member")
