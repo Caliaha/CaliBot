@@ -17,52 +17,60 @@ def isSuperUser(self, ctx):
 		return True
 	return False
 
+async def checkPermission(self, ctx, command):
+	#if isSuperUser(self, ctx):
+	#	return True
+
+	guildID = ctx.guild.id
+	try:
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		with connection.cursor() as cursor:
+			sql = "SELECT `disabled` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+			cursor.execute(sql, (guildID, command))
+			print(guildID, command)
+			result = cursor.fetchone()
+			if result is not None:
+				print(result['disabled'])
+				if (int(result['disabled']) == 1):
+					await ctx.send("I'm sorry but commands relating to " + command + " have been disabled.")
+					return False
+	except:
+		return False
+	finally:
+		connection.close()
+
+	try:
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		with connection.cursor() as cursor:
+			sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
+			cursor.execute(sql, (guildID, command))
+			result = cursor.fetchone()
+			if result is not None:
+				allowed_roles = result['allowed_roles'].split(',')
+				for role in ctx.message.author.roles:
+					if role.name in allowed_roles:
+						print(ctx.message.author.name, 'was allowed to use', command, 'on guild', guildID)
+						return True
+	except:
+		return False
+	finally:
+		connection.close()
+	#await ctx.send("I'm sorry but you don't have any roles that have been allowed access to this command in this way.")
+	return False
+
 def checkPermissions(command):
 	def decorator(func):
 		@wraps(func)
 		async def wrapper(*args, **kwargs):
 			self = args[0]
 			ctx = args[1]
-			print(command)
+			print(command, self, ctx)
 			if isinstance(ctx.message.channel, discord.abc.PrivateChannel) is True:
 				return await func(*args, **kwargs)
-			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			guildID = ctx.guild.id
-			try:
-				with connection.cursor() as cursor:
-					sql = "SELECT `disabled` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
-					cursor.execute(sql, (guildID, command))
-					print(guildID, command)
-					result = cursor.fetchone()
-					if result is not None:
-						print(result['disabled'])
-						if (int(result['disabled']) == 1):
-							await ctx.send("I'm sorry but commands relating to " + command + " have been disabled.")
-							return False
-					#return await func(*args, **kwargs)
-			finally:
-				connection.close()
-			if isSuperUser(self, ctx):
+			if await checkPermission(self, ctx, command) is True:
 				return await func(*args, **kwargs)
-			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			try:
-				with connection.cursor() as cursor:
-					sql = "SELECT `allowed_roles` FROM `permissions` WHERE `guildID`=%s AND `command`=%s"
-					cursor.execute(sql, (guildID, command))
-					result = cursor.fetchone()
-					if result is not None:
-						allowed_roles = result['allowed_roles'].split(',')
-						for role in ctx.message.author.roles:
-							if role.name in allowed_roles:
-								print(ctx.message.author.name, 'was allowed to use', command, 'on guild', guildID)
-								return await func(*args, **kwargs)
-						else:
-							await ctx.send("I'm sorry but you don't have any roles that have been allowed access to this command.")
-							return False
-						#print(result['allowed_roles'])
-					#return await func(*args, **kwargs)
-			finally:
-				connection.close()
+			await ctx.send("I'm sorry but you don't have any roles that have been allowed access to this command")
+			return False
 		return wrapper
 	return decorator
 	
