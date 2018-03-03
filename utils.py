@@ -1,6 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-from stuff import checkPermissions, isBotOwner, superuser
+from stuff import checkPermissions, doThumbs, isBotOwner, superuser
 import sys
 import time
 import uptime
@@ -11,6 +11,7 @@ class utils():
 
 	@commands.command(hidden=True)
 	@isBotOwner()
+	@doThumbs()
 	async def guildlist(self, ctx):
 		"""Shows guilds that I am active in"""
 		for guild in self.bot.guilds:
@@ -27,6 +28,7 @@ class utils():
 	@commands.command(hidden=True)
 	@isBotOwner()
 	@commands.guild_only()
+	@doThumbs()
 	async def guildowner(self, ctx):
 		"""Shows guild owner"""
 		await ctx.send(ctx.message.guild.owner)
@@ -41,6 +43,7 @@ class utils():
 		await sys.exit()
 
 	@commands.command()
+	@doThumbs()
 	async def uptime(self, ctx):
 		"""Shows how long CaliBot and the computer running it has been online"""
 		await ctx.send(self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
@@ -48,24 +51,29 @@ class utils():
 
 	@commands.command()
 	@isBotOwner()
+	@doThumbs()
 	async def load(self, ctx, extension_name : str):
 		"""Loads an extension."""
 		try:
 			self.bot.load_extension(extension_name)
 		except (AttributeError, ImportError) as e:
 			await ctx.send("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
-			return
+			return False
 		await ctx.send("{} loaded.".format(extension_name))
+		return True
 
 	@commands.command()
 	@isBotOwner()
+	@doThumbs()
 	async def unload(self, ctx, extension_name : str):
 		"""Unloads an extension."""
 		self.bot.unload_extension(extension_name)
 		await ctx.send("{} unloaded.".format(extension_name))
+		return True
 
 	@commands.command()
 	@isBotOwner()
+	@doThumbs()
 	async def reload(self, ctx, extension_name : str):
 		"""Unloads and then loads an extension."""
 		self.bot.unload_extension(extension_name)
@@ -73,8 +81,20 @@ class utils():
 			self.bot.load_extension(extension_name)
 		except (AttributeError, ImportError) as e:
 			await ctx.send("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
-			return
+			return False
 		await ctx.send("{} has been reloaded.".format(extension_name))
+		return True
+
+	@commands.command(hidden=True)
+	@isBotOwner()
+	@doThumbs()
+	async def eval(self, ctx, code : str):
+		try:
+			await ctx.send(eval(code))
+		except Exception as e:
+			await ctx.send(e)
+			return False
+		return True
 
 def setup(bot):
 	bot.add_cog(utils(bot))
