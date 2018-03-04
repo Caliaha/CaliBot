@@ -18,8 +18,8 @@ def isSuperUser(self, ctx):
 	return False
 
 async def checkPermission(self, ctx, command):
-	#if isSuperUser(self, ctx):
-	#	return True
+	if isSuperUser(self, ctx):
+		return True
 
 	guildID = ctx.guild.id
 	try:
