@@ -9,10 +9,10 @@ def cleanUserInput(input):
 	return re.sub('[^a-zA-Z -]+', '', input)
 
 def isSuperUser(self, ctx):
-	if (ctx.message.guild.owner == ctx.message.author):
+	if (ctx.guild.owner == ctx.message.author):
 		print("checkPermissions, user is guild owner")
 		return True
-	if (ctx.message.author.id == self.bot.ADMINACCOUNT):
+	if (ctx.author.id == self.bot.ADMINACCOUNT):
 		print("checkPermissions, user is bot owner")
 		return True
 	return False
