@@ -30,7 +30,7 @@ class WoWToken():
 				if token:
 					try:
 						print('Set Now Playing to -> WoW Token: {:,}'.format(int(token)))
-						await self.bot.change_presence(game=discord.Game(name='WoW Token: {:,}'.format(int(token))))
+						await self.bot.change_presence(activity=discord.Game(name='WoW Token: {:,}'.format(int(token))))
 					except Exception as e:
 						print('Error changing presence to wow token price', e)
 				else:
