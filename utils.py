@@ -32,6 +32,7 @@ class utils():
 	async def guildowner(self, ctx):
 		"""Shows guild owner"""
 		await ctx.send(ctx.message.guild.owner)
+		return True
 
 	@commands.command()
 	@checkPermissions('utils')
@@ -48,6 +49,7 @@ class utils():
 		"""Shows how long CaliBot and the computer running it has been online"""
 		await ctx.send(self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
 		await ctx.send('Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
+		return True
 
 	@commands.command()
 	@isBotOwner()
