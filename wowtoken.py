@@ -34,7 +34,7 @@ class WoWToken():
 					except Exception as e:
 						print('Error changing presence to wow token price', e)
 				else:
-					await self.bot.change_presence(game=discord.Game(name=None))
+					await self.bot.change_presence(activity=discord.Game(name=None))
 			except:
 				print('Unable to set Playing Status to wow token price')
 			await asyncio.sleep(300)
