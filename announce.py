@@ -35,7 +35,7 @@ class Announce():
 			print("Unable to change nickname")
 
 	async def playTTS(self):
-		while True:
+		while not self.bot.is_closed():
 			#self.control.clear()
 			tts = await self.queue.get()
 			print(tts["guild"])
@@ -97,7 +97,7 @@ class Announce():
 			return cleanUserInput(member.name)
 
 	async def on_voice_state_update(self, member, before, after):
-		print("VOICE_STATE_UPDATE", member.name, member.guild.name, after.channel)
+		print("VOICE_STATE_UPDATE", member.name, member.guild.name, before.channel, after.channel)
 		try:
 			if member.name == self.bot.NAME:
 				if after.channel is not None: # Bot has moved, update DB for reconnection purposes and return so we don't announce ourselves
