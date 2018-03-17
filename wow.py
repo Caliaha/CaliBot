@@ -945,17 +945,34 @@ class WoW():
 		raidID = { 'ant': '17', 'tomb': '13' }
 		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
 
+			#if guild == 'heroic':
+				#guild = None
+				#difficulty = args[0].lower()
+
 		try:
 			guild = args[0]
 		except:
-			guild = "Clan Destined"
+			guild = None
 		try:
 			realm = args[1]
 		except:
-			realm = "Cairne"
-		
-		
-		if (len(args) == 0 and ctx.guild is not None):
+			realm = None
+
+		try:
+			difficulty = args[2].lower()
+			if difficulty not in difficultyID:
+				raise
+		except:
+			if guild == 'heroic' and realm == None:
+				difficulty = 'heroic'
+				guild = None
+			else:
+				difficulty = "normal"
+
+		if realm is None:
+			realm = 'Cairne'
+
+		if (guild is None and ctx.guild is not None):
 			guild, realm, updateabledMessaged = await self.fetchGuildFromDB(ctx)
 
 		async with ctx.channel.typing():
@@ -964,12 +981,6 @@ class WoW():
 			#except:
 			region = "US"
 
-			try:
-				difficulty = args[2].lower()
-				if difficulty not in difficultyID:
-					raise
-			except:
-				difficulty = "normal"
 			try:
 				raid = args[3]
 				if raid not in raidID:
