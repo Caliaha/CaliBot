@@ -237,7 +237,7 @@ class Announce():
 	
 	@commands.command(pass_context=True, hidden=True)
 	@commands.guild_only()
-	@superuser()
+	@checkPermissions('voice')
 	async def say(self, ctx, message):
 		tts = { }
 		tts["message"] = "<volume level='50'>" + cleanUserInput(message)
