@@ -115,7 +115,7 @@ class Permissions():
 						sql = "UPDATE `permissions` SET `allowed_roles` = %s WHERE `guildID` = %s AND `command`=%s LIMIT 1"
 						cursor.execute(sql, (allowed_roles, guildID, command))
 						connection.commit()
-						await ctx.send(role.name + ' was removed form the list of allowed roles for ' + command + ' command.')
+						await ctx.send(role.name + ' was removed from the list of allowed roles for ' + command + ' command.')
 						return True
 				await ctx.send(role.name + ' was not found in the allowed roles for ' + command + ' command.')
 				return False
