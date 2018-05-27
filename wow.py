@@ -142,7 +142,7 @@ class WoW():
 		affixes = { affix1[1] : affix1[2], affix2[1] : affix2[2], affix3[1] : affix3[2] }
 		succeded = 0
 		for affix in affixes:
-			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)<h2 class')
+			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)\n<h2 class')
 			wowheadAffixData = await fetchWebpage(self, 'https://www.wowhead.com' + affix)
 			if wowheadAffixData is not False:
 				affixDesc = affixDescP.search(wowheadAffixData)
@@ -165,6 +165,47 @@ class WoW():
 			return True
 		else:
 			return False
+
+	@commands.command()
+	async def ach(self, ctx, *, achievement):
+		"""Search for achievements"""
+		print('Beep Boop', achievement)
+		count = 0
+		try:
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "SELECT `id`, `title`, `description` FROM `wow_achievements` WHERE MATCH(`title`, `description`) AGAINST(%s)"
+				cursor.execute(sql, (achievement))
+				results = cursor.fetchall()
+				print(cursor.rowcount)
+				count = cursor.rowcount
+				#print(results)
+		except Exception as e:
+			#ctx.send('Error searching database')
+			print(e)
+			return False
+		finally:
+			connection.close()
+		
+		
+		#embed.set_thumbnail(url='https://render-us.worldofwarcraft.com/character/' + toon['thumbnail'])
+		msg = ''
+		for result in results:
+			msg += '[{}](https://www.wowhead.com/achievement={}) {}\n'.format(result['title'], result['id'], result['description'])
+			#if cursor.rowcount <= 3:
+				
+			print(result['title'], result['description'])
+		print(count)
+		if count == 0:
+			await ctx.send('No results found')
+			return False
+		elif count <= 20:
+			color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))
+			embed = discord.Embed(title='Achievements Found', description=msg,url='https://www.google.com', color=color)
+			await ctx.send(embed=embed)
+			return True
+		else:
+			await ctx.send('Too many results found, please narrow your search')
 
 	@commands.command(description='Set default character/realm combo for WoW commands')
 	async def setmain(self, ctx, *, toon: str):
@@ -320,7 +361,7 @@ class WoW():
 		for character in roster['guildRoster']['roster']:
 			#print(character['character']['name'], character['character']['items']['item_level_equipped'], character['character']['items']['item_level_total'])
 			if 'keystoneScores' in character and 'allScore' in character['keystoneScores']:
-				if (int(character['keystoneScores']['allScore']) > 0):
+				if (int(character['keystoneScores']['allScore']) >= 300):
 					box.addRow( [ character['character']['name'], str(character['character']['items']['item_level_equipped']), int(character['keystoneScores']['allScore']) ] )
 
 		box.sort(2, True)
@@ -945,10 +986,6 @@ class WoW():
 		raidID = { 'ant': '17', 'tomb': '13' }
 		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
 
-			#if guild == 'heroic':
-				#guild = None
-				#difficulty = args[0].lower()
-
 		try:
 			guild = args[0]
 		except:
@@ -963,11 +1000,11 @@ class WoW():
 			if difficulty not in difficultyID:
 				raise
 		except:
-			if guild == 'heroic' and realm == None:
-				difficulty = 'heroic'
+			if guild == 'normal' and realm == None:
+				difficulty = 'normal'
 				guild = None
 			else:
-				difficulty = "normal"
+				difficulty = "heroic"
 
 		if realm is None:
 			realm = 'Cairne'
