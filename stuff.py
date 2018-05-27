@@ -69,7 +69,10 @@ def checkPermissions(command):
 				return await func(*args, **kwargs)
 			if await checkPermission(self, ctx, command) is True:
 				return await func(*args, **kwargs)
-			await ctx.send("I'm sorry but you don't have any roles that have been allowed access to this command")
+			try:
+				await ctx.message.add_reaction("🚫")
+			except:
+				await ctx.send("I'm sorry but you don't have any roles that have been allowed access to this command")
 			return False
 		return wrapper
 	return decorator
@@ -83,7 +86,10 @@ def isBotOwner():
 			if (ctx.message.author.id == self.bot.ADMINACCOUNT):
 				print("checkPermissions, user is bot owner")
 				return await func(*args, **kwargs)
-			await ctx.send("I'm sorry but you don't have permission to use this command.")
+			try:
+				await ctx.message.add_reaction("🚫")
+			except:
+				await ctx.send("I'm sorry but you don't have permission to use this command.")
 			return False
 		return wrapper
 	return decorator
@@ -100,7 +106,10 @@ def superuser():
 			if (ctx.guild != None and ctx.guild.owner == ctx.message.author):
 				print("checkPermissions, user is guild owner")
 				return await func(*args, **kwargs)
-			await ctx.send("I'm sorry but you don't have permission to use this command.")
+			try:
+				await ctx.message.add_reaction("🚫") # no_entry_sign
+			except:
+				await ctx.send("I'm sorry but you don't have permission to use this command.")
 			return False
 		return wrapper
 	return decorator
