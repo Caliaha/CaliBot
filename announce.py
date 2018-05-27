@@ -13,6 +13,9 @@ class Announce():
 		self.audio_player = self.bot.loop.create_task(self.playTTS())
 		self.file = '-w=' + self.bot.TTS_FILE
 		self.paused = False
+		self.ignored_channels = {}
+		self.allowedGuilds = [ 332340487451312141, 254746234466729987 ]
+		self.bot.loop.create_task(self.inactivityCheck())
 
 	async def updateNickname(self, guild, name, action='Error'):
 		if name is None:
@@ -80,9 +83,70 @@ class Announce():
 		else:
 			return cleanUserInput(member.name)
 
+	async def inactivityCheck(self):
+		await self.bot.wait_until_ready()
+		while not self.bot.is_closed():
+			for voiceClient in self.bot.voice_clients:
+				if self.countNonBotMembers(voiceClient.channel.members) == 0:
+					print('Leaving channel {} on guild {} because of inactivity'.format(voiceClient.channel, voiceClient.guild))
+					#await self.joinOrMove(voiceClient.guild, voiceClient.channel)
+					await self.leaveVoiceChannel(voiceClient.guild, voiceClient.channel)
+			await asyncio.sleep(60)
+
+	def countNonBotMembers(self, members):
+		count = 0
+		for member in members:
+			if not member.bot:
+				count = count + 1
+		return count
+
 	async def on_voice_state_update(self, member, before, after):
 		print("VOICE_STATE_UPDATE", member.name, member.guild.name, before.channel, after.channel)
 		guild = member.guild
+		if guild.id not in self.allowedGuilds:
+		 print("Guild {} not in list of allowed guilds".format(guild.name))
+		 return
+		
+		if guild.id not in self.ignored_channels:
+			self.ignored_channels[guild.id] = []
+			print('Adding {} to self.ignored_channels'.format(guild.name))
+
+			try:
+				connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+				with connection.cursor() as cursor:
+					sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `guildID`=%s"
+					cursor.execute(sql, (guild.id))
+					result = cursor.fetchone()
+					if result is not None:
+						if result['mdg_ignore'] is not None:
+							self.ignored_channels[guild.id] = result['mdg_ignore'].split()
+			finally:
+				connection.close()
+
+		if member.guild.voice_client:
+			if self.countNonBotMembers(member.guild.voice_client.channel.members) == 0:
+
+				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
+					print('Moving to {} because our channel is empty'.format(after.channel))
+					await self.joinOrMove(guild, after.channel)
+					return
+				else:
+					print('No members left in channel, finding another one')
+					for voiceChannel in guild.voice_channels:
+						if str(voiceChannel.id) not in self.ignored_channels[guild.id] and self.countNonBotMembers(voiceChannel.members) > 0:
+							if await self.joinOrMove(guild, voiceChannel):
+								return
+					print('Left voice channel on {} because no one left in valid channels'.format(guild.name))
+					await self.leaveVoiceChannel(guild, member.guild.voice_client.channel)
+					await self.updateNickname(guild, None)
+					return
+		else:
+			if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
+				print('Joining {} because someone has entered a valid voice channel'.format(after.channel))
+				await self.joinOrMove(guild, after.channel)
+				return
+	
+
 		if (guild.voice_client is None):
 			return
 
@@ -152,7 +216,7 @@ class Announce():
 		finally:
 			connection.close()
 
-	async def leaveVoiceChannel(self, guild, channel):
+	async def leaveVoiceChannel(self, guild, channel): # Fix this
 		try:
 			await guild.voice_client.disconnect()
 		except:
@@ -162,18 +226,21 @@ class Announce():
 	async def joinOrMove(self, guild, channel): #FIX ME
 		if guild.voice_client is not None:
 			if guild.voice_client.channel is channel:
+				print('Leaving voice channel {}'.format(channel.name))
 				await guild.voice_client.disconnect()
-				return
+				return True
 			print("Attempting to change voice channels")
-			await guild.voice_client.move_to(channel)
-			
-			await self.updateDB(guild.id, channel.id)
-			return True
+			if await guild.voice_client.move_to(channel):
+				await self.updateDB(guild.id, channel.id)
+				return True
+			return False
  
 		if channel is not None:
-			await channel.connect()
-			await self.updateDB(guild.id, channel.id)
-			return True
+			if await channel.connect():
+				print('Connectiong to voice channel {} on guild {}'.format(channel, guild))
+				await self.updateDB(guild.id, channel.id)
+				return True
+			return False
 		else:
 			await ctx.send("I couldn't figure out which voice channel you were in.")
 			return False
@@ -332,6 +399,7 @@ class Announce():
 					else:
 						await ctx.send(channel.name + ' has already been added to the !mdg ignore list.')
 						return False
+					self.ignored_channels[ctx.guild.id] = mdg_ignore
 					mdg_ignore = ' '.join(mdg_ignore)
 					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `guildID` = %s LIMIT 1"
 					cursor.execute(sql, (mdg_ignore, ctx.message.guild.id))
