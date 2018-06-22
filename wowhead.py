@@ -5,7 +5,8 @@ import discord
 from discord.ext import commands
 import pymysql.cursors
 import re
-from stuff import doThumbs, fetchWebpage, isBotOwner
+from stuff import doThumbs, fetchWebpage
+import urllib.request
 
 class WowHead():
 	def __init__(self, bot):
@@ -74,10 +75,28 @@ class WowHead():
 			await asyncio.sleep(120)
 
 	def subMarkup(self, text):
+		def urlFix(match):
+			url = match.group(1).replace('\\/', '/')
+			return '[{}]({})'.format(match.group(2), url)
+		
+		def fetchAchievementName(match):
+			url = 'http://www.wowhead.com/achievement={}'.format(match.group(1))
+			try:
+				page = urllib.request.urlopen(url).read().decode('utf-8') # Not using async here because it's easier lol
+				achievementPattern = re.compile('<meta property=\"og\:title\" content=\"(.*?)\">')
+				achievement = achievementPattern.search(page)
+				name = achievement[1]
+			except:
+				name = 'link'
+				
+			return '[{}]({})'.format(name, url)
+
 		text = text.replace('[b]', '**')
 		text = text.replace('[\/b]', '**')
 		
-		text = re.sub('\[.*?\]', '', text)
+		text = re.sub('\[achievement=(\d+)\]', fetchAchievementName, text)
+		text = re.sub('\[url=(.*?)\](.*?)\[\\\/url\]', urlFix, text)
+		text = re.sub('\[.*?\](?!\()', '', text)
 		text = re.sub(r'\\r\\n', '\n', text)
 		
 		return text
