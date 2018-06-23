@@ -63,10 +63,19 @@ class WowHead():
 							embed.url = url
 
 				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\", \"news')
-				descriptionMatch = descriptionPattern.search(div.text)
-				if descriptionMatch:
-					description = self.subMarkup(descriptionMatch[1])
-					embed.description = description
+				descriptionPattern2 = re.compile('<noscript>(.*?)<\/noscript>')
+				noscript = str(div.find('noscript'))
+				
+				if noscript:
+					descriptionMatch = descriptionPattern2.search(noscript)
+					if descriptionMatch:
+						description = self.subMarkup(descriptionMatch[1], 'html')
+						embed.description = description
+				else:
+					descriptionMatch = descriptionPattern.search(div.text)
+					if descriptionMatch:
+						description = self.subMarkup(descriptionMatch[1], 'bb')
+						embed.description = description
 
 				for guild in self.bot.guilds:
 					for channel in guild.text_channels:
@@ -78,9 +87,11 @@ class WowHead():
 							break
 			await asyncio.sleep(120)
 
-	def subMarkup(self, text):
+	def subMarkup(self, text, type):
 		def urlFix(match):
 			url = match.group(1).replace('\\/', '/')
+			if not urlparse(url).netloc:
+				url = 'https://www.wowhead.com' + url
 			#print('[{}]({})'.format(match.group(2), url))
 			return '[{}]({})'.format(match.group(2), url)
 		
@@ -96,19 +107,29 @@ class WowHead():
 				
 			return '[{}]({})'.format(name, url)
 
-		text = text.replace('[b]', '**')
-		text = text.replace('[\/b]', '**')
+		if type == 'bb':
+			text = text.replace('[b]', '**')
+			text = text.replace('[\/b]', '**')
 		
-		text = text.replace('\\\"', '"')
+			text = text.replace('\\\"', '"')
 
-		text = re.sub('\[achievement=(\d+)\]', fetchAchievementName, text)
-		text = re.sub('\[url=(.*?)\](.*?)\[\\\/url\]', urlFix, text)
-		#text = re.sub('\<a href=\\\"(.*?)\\\".*?\>(.*?)\<\\\/a\>', urlFix, text)
-		#text = re.sub('<iframe.*?<\\\/iframe>', '', text)
-		text = re.sub('\[html\].*?\[\\\/html\]', '', text)
-		text = re.sub('\[.*?\](?!\()', '', text)
-		text = re.sub(r'\\r\\n', '\n', text)
-
+			text = re.sub('\[achievement=(\d+)\]', fetchAchievementName, text)
+			text = re.sub('\[url=(.*?)\](.*?)\[\\\/url\]', urlFix, text)
+			#text = re.sub('\<a href=\\\"(.*?)\\\".*?\>(.*?)\<\\\/a\>', urlFix, text)
+			#text = re.sub('<iframe.*?<\\\/iframe>', '', text)
+			text = re.sub('\[html\].*?\[\\\/html\]', '', text)
+			text = re.sub('\[.*?\](?!\()', '', text)
+			text = re.sub(r'\\r\\n', '\n', text)
+		
+		if type == 'html':
+			text = text.replace('<b>', '**')
+			text = text.replace('</b>', '**')
+			text = text.replace('<i>', '***')
+			text = text.replace('</i>', '***')
+			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
+			text = re.sub('<iframe.*?<\\\/iframe>', '', text)
+			text = re.sub('\<br\/\>', '\n', text)
+		#print(text)
 		return text
 
 	async def storePostedData(self, guildID, postID):
