@@ -6,6 +6,7 @@ from discord.ext import commands
 import pymysql.cursors
 import re
 from stuff import doThumbs, fetchWebpage
+from urllib.parse import urlparse
 import urllib.request
 
 class WowHead():
@@ -56,7 +57,10 @@ class WowHead():
 							if (a.text):
 								embed.set_author(name=a.text)
 
-							embed.url = a.get('href')
+							url = a.get('href')
+							if not urlparse(url).netloc:
+								url = 'https://www.wowhead.com' + url
+							embed.url = url
 
 				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\", \"news')
 				descriptionMatch = descriptionPattern.search(div.text)
@@ -77,6 +81,7 @@ class WowHead():
 	def subMarkup(self, text):
 		def urlFix(match):
 			url = match.group(1).replace('\\/', '/')
+			#print('[{}]({})'.format(match.group(2), url))
 			return '[{}]({})'.format(match.group(2), url)
 		
 		def fetchAchievementName(match):
@@ -98,9 +103,12 @@ class WowHead():
 
 		text = re.sub('\[achievement=(\d+)\]', fetchAchievementName, text)
 		text = re.sub('\[url=(.*?)\](.*?)\[\\\/url\]', urlFix, text)
+		#text = re.sub('\<a href=\\\"(.*?)\\\".*?\>(.*?)\<\\\/a\>', urlFix, text)
+		#text = re.sub('<iframe.*?<\\\/iframe>', '', text)
+		text = re.sub('\[html\].*?\[\\\/html\]', '', text)
 		text = re.sub('\[.*?\](?!\()', '', text)
 		text = re.sub(r'\\r\\n', '\n', text)
-		
+
 		return text
 
 	async def storePostedData(self, guildID, postID):
