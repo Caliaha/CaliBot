@@ -58,7 +58,7 @@ class WowHead():
 
 							embed.url = a.get('href')
 
-				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\"')
+				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\", \"news')
 				descriptionMatch = descriptionPattern.search(div.text)
 				if descriptionMatch:
 					description = self.subMarkup(descriptionMatch[1])
@@ -94,6 +94,8 @@ class WowHead():
 		text = text.replace('[b]', '**')
 		text = text.replace('[\/b]', '**')
 		
+		text = text.replace('\\\"', '"')
+
 		text = re.sub('\[achievement=(\d+)\]', fetchAchievementName, text)
 		text = re.sub('\[url=(.*?)\](.*?)\[\\\/url\]', urlFix, text)
 		text = re.sub('\[.*?\](?!\()', '', text)
