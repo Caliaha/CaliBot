@@ -90,6 +90,28 @@ class utils():
 	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
+	async def dm(self, ctx, messageID: int, channelID = None, guildID = None):
+		try:
+			if (guildID):
+				guild = self.bot.get_guild(int(guildID))
+				print(guild.name)
+			else:
+				guild = ctx.guild
+			if (channelID):
+				channel = guild.get_channel(int(channelID))
+				print(channel.name)
+			else:
+				channel = ctx.channel
+			print('Getting message for {} in {}'.format(channel.name, guild.name))
+			message = await channel.get_message(messageID)
+			await message.delete()
+			return True
+		except:
+			return False
+
+	@commands.command(hidden=True)
+	@isBotOwner()
+	@doThumbs()
 	async def eval(self, ctx, *, code : str):
 		try:
 			await ctx.send(eval(code))

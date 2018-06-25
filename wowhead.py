@@ -90,10 +90,13 @@ class WowHead():
 	def subMarkup(self, text, type):
 		def urlFix(match):
 			url = match.group(1).replace('\\/', '/')
+			name = match.group(2)
+			if name == '':
+				name = url
 			if not urlparse(url).netloc:
 				url = 'https://www.wowhead.com' + url
 			#print('[{}]({})'.format(match.group(2), url))
-			return '[{}]({})'.format(match.group(2), url)
+			return '[{}]({})'.format(name, url)
 		
 		def fetchAchievementName(match):
 			url = 'http://www.wowhead.com/achievement={}'.format(match.group(1))
