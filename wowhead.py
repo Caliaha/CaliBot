@@ -130,8 +130,14 @@ class WowHead():
 			text = text.replace('<i>', '***')
 			text = text.replace('</i>', '***')
 			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
-			text = re.sub('<iframe.*?<\\\/iframe>', '', text)
+			text = re.sub('<iframe.*?<\/iframe>', '', text)
 			text = re.sub('\<br\/\>', '\n', text)
+			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
+			text = text.replace('&amp;', '&')
+			text = text.replace('&quot;', '"')
+			text = text.replace('&lt;', '<')
+			text = text.replace('&gt;', '>')
+			text = text.replace('&nbsp;', ' ')
 		#print(text)
 		return text
 
@@ -148,6 +154,7 @@ class WowHead():
 			connection.close()
 
 	async def checkIfPosted(self, guildID, postID):
+		print(guildID, postID)
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
