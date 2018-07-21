@@ -96,7 +96,7 @@ class Announce():
 	def countNonBotMembers(self, members):
 		count = 0
 		for member in members:
-			if not member.bot:
+			if not member.bot and member.name is not 'CaliBot':
 				count = count + 1
 		return count
 
