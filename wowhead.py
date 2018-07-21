@@ -132,6 +132,7 @@ class WowHead():
 			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
 			text = re.sub('<iframe.*?<\/iframe>', '', text)
 			text = re.sub('\<br\/\>', '\n', text)
+			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
 			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
 			text = text.replace('&amp;', '&')
 			text = text.replace('&quot;', '"')
