@@ -48,11 +48,12 @@ class WowHead():
 						if 'news-post-teaser-image' in a.get('class'):
 							if 'style' in a.attrs:
 								style = a.get('style')
-								linkPattern = re.compile('url\(\/\/(.*?\.jpg)')
+								linkPattern = re.compile('url\((.*?\.jpg)')
 								linkMatch = linkPattern.search(style)
 								
 								if (linkMatch):
-									embed.set_image(url='http://' + linkMatch[1])
+									print(linkMatch[1])
+									embed.set_image(url=linkMatch[1]) #url='http://' +
 						if 'news-post-type' in a.get('class'):
 							if (a.text):
 								embed.set_author(name=a.text)
@@ -125,21 +126,26 @@ class WowHead():
 			text = re.sub(r'\\r\\n', '\n', text)
 		
 		if type == 'html':
-			text = text.replace('<b>', '**')
-			text = text.replace('</b>', '**')
-			text = text.replace('<i>', '***')
-			text = text.replace('</i>', '***')
-			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
-			text = re.sub('<iframe.*?<\/iframe>', '', text)
-			text = re.sub('\<br\/\>', '\n', text)
-			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
-			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
+			print('Start', text)
+			text = text.replace('\"', '"')
+			text = text.replace('\\\\', '\\')
+			text = text.replace('\/', '/')
 			text = text.replace('&amp;', '&')
 			text = text.replace('&quot;', '"')
 			text = text.replace('&lt;', '<')
 			text = text.replace('&gt;', '>')
 			text = text.replace('&nbsp;', ' ')
-		#print(text)
+			text = text.replace('<b>', '**')
+			text = text.replace('</b>', '**')
+			text = text.replace('<i>', '***')
+			text = text.replace('</i>', '***')
+			text = re.sub('<iframe.*?</iframe>', '', text)
+			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
+			text = re.sub('\<br\/\>', '\n', text)
+			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
+			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
+
+		print(type, text)
 		return text
 
 	async def storePostedData(self, guildID, postID):
