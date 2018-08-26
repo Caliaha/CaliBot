@@ -46,13 +46,19 @@ class WowHead():
 				for a in div.find_all('a'):
 					if 'class' in a.attrs:
 						if 'news-post-teaser-image' in a.get('class'):
+							url = a.get('href')
+							print('Setting url to', url)
+							if not urlparse(url).netloc:
+								url = 'https://www.wowhead.com' + url
+							embed.url = url
 							if 'style' in a.attrs:
 								style = a.get('style')
-								linkPattern = re.compile('url\((.*?\.jpg)')
+								linkPattern = re.compile('url\((.*?\.(jpg|png))')
 								linkMatch = linkPattern.search(style)
 								
 								if (linkMatch):
 									print(linkMatch[1])
+									print('Added image', linkMatch[1])
 									embed.set_image(url=linkMatch[1]) #url='http://' +
 						if 'news-post-type' in a.get('class'):
 							if (a.text):
