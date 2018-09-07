@@ -289,12 +289,12 @@ class WoW():
 					print("Found guild")
 		except:
 			print('Unable to find guild')
-			await self.bot.say('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
 			return False
 		
 		if guildData is None:
 			print('Unable to find guild')
-			await self.bot.say('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
 			return False
 
 		try:
@@ -343,7 +343,8 @@ class WoW():
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
-			rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
+			rawJSON = await fetchWebpage(self, 'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm=' + realm + '&guild=' + guild + '&season=season-bfa-1&class=all&role=all&page=0')
+			#rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
 			await updateableMessage.delete()
@@ -358,14 +359,17 @@ class WoW():
 		
 		box = BoxIt()
 		box.setTitle('Mythic+ Scores for ' + guild)
-		for character in roster['guildRoster']['roster']:
-			#print(character['character']['name'], character['character']['items']['item_level_equipped'], character['character']['items']['item_level_total'])
-			if 'keystoneScores' in character and 'allScore' in character['keystoneScores']:
-				if (int(character['keystoneScores']['allScore']) >= 300):
-					box.addRow( [ character['character']['name'], str(character['character']['items']['item_level_equipped']), int(character['keystoneScores']['allScore']) ] )
+		for character in roster['rankings']['rankedCharacters']:
+			print(character['character']['name'], character['character']['spec']['name'], character['rank'], character['score'])
+			box.addRow([ character['character']['name'], character['character']['spec']['name'], float(character['score']) ])
+		#for character in roster['guildRoster']['roster']:
+		#	#print(character['character']['name'], character['character']['items']['item_level_equipped'], character['character']['items']['item_level_total'])
+		#	if 'keystoneScores' in character and 'allScore' in character['keystoneScores']:
+		#		if (int(character['keystoneScores']['allScore']) >= 300):
+		#			box.addRow( [ character['character']['name'], str(character['character']['items']['item_level_equipped']), int(character['keystoneScores']['allScore']) ] )
 
 		box.sort(2, True)
-		box.setHeader( ['Name', 'Item Level', 'Mythic+ Score' ] ) # FIX ME Shouldn't have to put header after the sort
+		box.setHeader( ['Name', 'Spec', 'Mythic+ Score' ] ) # FIX ME Shouldn't have to put header after the sort
 		message = '```' + box.box()
 		
 		#embed=discord.Embed(title='Mythic+', description='SOmething', url='https://raider.io/guilds/us/' +  urllib.parse.quote(realm) + '/' + urllib.parse.quote(guild) + '/roster#mode=mythic_plus', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))) Maybe for later
@@ -911,7 +915,7 @@ class WoW():
 		region = "US"
 
 		if (guild == None or realm == None):
-			await self.bot.say('Invalid arguments passed and no default guild  or realm set for this Discord guild\nUsage: !linklogs "Guild" "Server"')
+			await ctx.send('Invalid arguments passed and no default guild  or realm set for this Discord guild\nUsage: !linklogs "Guild" "Server"')
 		
 		try:
 			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
