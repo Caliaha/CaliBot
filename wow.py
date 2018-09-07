@@ -125,24 +125,26 @@ class WoW():
 		affix1P = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-1" class="icontiny"><img src=".*?"> (.*?)</a>')
 		affix2P = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-2" class="icontiny"><img src=".*?"> (.*?)</a>')
 		affix3P = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-3" class="icontiny"><img src=".*?"> (.*?)</a>')
+		affix4P = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-4" class="icontiny"><img src=".*?"> (.*?)</a>')
 
 		affix1 = affix1P.search(wowheadData)
 		affix2 = affix2P.search(wowheadData)
 		affix3 = affix3P.search(wowheadData)
+		affix4 = affix4P.search(wowheadData)
  
 		embed=discord.Embed(title='Mythic+ Affixes', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 
 		msg = 'Mythic+ Affixes'
 
-		if affix1 is None or affix2 is None or affix3 is None:
+		if affix1 is None or affix2 is None or affix3 is None or affix4 is None:
 			await ctx.send('I was unable to find the affixes on wowhead.com. If it\'s a tuesday, wowhead may not have yet updated them for this week.')
 			print("Couldn't find the affixes")
 			return False
 
-		affixes = { affix1[1] : affix1[2], affix2[1] : affix2[2], affix3[1] : affix3[2] }
+		affixes = { affix1[1] : affix1[2], affix2[1] : affix2[2], affix3[1] : affix3[2], affix4[1] : affix4[2] }
 		succeded = 0
 		for affix in affixes:
-			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)\n<h2 class')
+			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)(\n|<div)')
 			wowheadAffixData = await fetchWebpage(self, 'https://www.wowhead.com' + affix)
 			if wowheadAffixData is not False:
 				affixDesc = affixDescP.search(wowheadAffixData)
@@ -151,9 +153,9 @@ class WoW():
 					msg += '\n**' + affixes[affix] + '** -> ' + affixDesc[1]
 					succeded += 1
  
-		if succeded < 3:
-			embed.description = 'The affixes for this week are: ' + affix1[2] + ', ' + affix2[2] + ', and ' + affix3[2] + '.\nThere were some errors while attempting to fetch their effects.'
-			msg += '\nThe affixes for this week are: ' + affix1[2] + ', ' + affix2[2] + ', and ' + affix3[2] + '.\nThere were some errors while attempting to fetch their effects.'
+		if succeded < 4:
+			embed.description = 'The affixes for this week are: ' + affix1[2] + ', ' + affix2[2] + ', ' + affix3[2] + ', and ' + affix4[2] + '.\nThere were some errors while attempting to fetch their effects.'
+			msg += '\nThe affixes for this week are: ' + affix1[2] + ', ' + affix2[2] + ', ' + affix3[2] + ', and ' + affix4[2] + '.\nThere were some errors while attempting to fetch their effects.'
 
 		try:
 			await ctx.send(embed=embed)
@@ -924,16 +926,25 @@ class WoW():
 			return False
 		
 		guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
+		guildPattern = re.compile('<div class="search-item"><div class="name"><a href="(.*?)"><span class=".*?">(.*?)</span></a></div><div class="server">(.*?) - (.*?)</div></div>', re.IGNORECASE)
 		guildMatch = guildPattern.search(guildList)
 		if guildMatch is not None:
-				guildID = guildMatch[1]
+				url = guildMatch[1]
 				guild = guildMatch[2]
 		else:
 			await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
 			return False
+		try:
+			guildPage = await fetchWebpage(self, url)
+			guildIDPattern = re.compile('var guildID = (\d+);')
+			guildIDMatch = guildIDPattern.search(guildPage)
+			guildID = guildIDMatch[1]
+		except:
+			await ctx.send('I was unable to find the guild ID for that guild')
+			return False
 
 		try:
-			reportlist = await fetchWebpage(self, "https://www.warcraftlogs.com/guilds/reportslist/" + str(guildID) + "/")
+			reportlist = await fetchWebpage(self, "https://www.warcraftlogs.com/guild/reports-list/" + str(guildID) + "/")
 		except:
 			await ctx.send('I was unable to grab the reports list for that guild or something')
 			return False
