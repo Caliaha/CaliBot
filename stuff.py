@@ -312,6 +312,7 @@ async def fetchWebpage(self, url, binary=False):
 						print("Page was 404")
 						return False
 					else:
+						print(r.status)
 						raise
 		except Exception as e:
 			print("Failed to grab webpage", url, attempts, e)
