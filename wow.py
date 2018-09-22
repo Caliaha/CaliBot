@@ -25,6 +25,12 @@ LEGION_GEMS = [ 151580, 151583, 151584, 151585 ]
 LEGION_GEMS_SABER = [ 130246, 130247, 130248 ]
 LEGION_GEMS_MIDTIER = [ 130219, 130220, 130221, 130222 ]
 LEGION_GEMS_CHEAP = [ 130215, 130216, 130217, 130218, ]
+BFA_ENCHANTSLOTS = [ 'mainHand', 'finger1', 'finger2' ]
+BFA_ENCHANTS = [ 5942, 5943, 5944, 5945, 5946, 5948, 5949, 5950, 5962, 5963, 5964, 5965, 5966 ]
+BFA_ENCHANTS_CHEAP = [ 5938, 5939, 5940, 5941 ]
+BFA_GEMS = [ 154126, 154127, 154128, 154129 ]
+BFA_GEMS_SABER = [ 153707, 153708, 153709 ]
+BFA_GEMS_CHEAP = [ 153710, 153711, 153712 ] 
 # Deadly Deep Chemirine, Quick Lightsphene,  Masterful Argulite, Versatile Labradorite
 # Saber's Eye of Strength, Saber's Eye of Agility, Saber's Eye of Intellect
 # Deadly Eye of Prophecy, Quick Dawnlight, Versatile Maelstrom Sapphire, Masterful Shadowruby
@@ -1205,8 +1211,8 @@ class WoW():
 		sabersEye = False
 		gemsCheapEquipped = 0
 		gemsMidTierEquipped = 0
-		legendariesNotUpgraded = 0
-		totalLegendariesEquipped = 0
+		#legendariesNotUpgraded = 0
+		#totalLegendariesEquipped = 0
 		for gear in gearSlots:
 			#embed.add_field(name="Gear", value=gearData, inline=True)
 			#gearData = ""
@@ -1222,13 +1228,13 @@ class WoW():
 							if toon['items'][gear]['tooltipParams']['gem' + str(i)]:
 								quality = toon['items'][gear]['tooltipParams']['gem' + str(i)]
 								#print("Gem Quality", quality, gear)
-								if quality in LEGION_GEMS:
+								if quality in BFA_GEMS:
 									pass
-								elif quality in LEGION_GEMS_SABER:
+								elif quality in BFA_GEMS_SABER:
 									sabersEye = True
-								elif quality in LEGION_GEMS_MIDTIER:
-									gemsMidTierEquipped += 1
-								elif quality in LEGION_GEMS_CHEAP:
+								#elif quality in LEGION_GEMS_MIDTIER:
+								#	gemsMidTierEquipped += 1
+								elif quality in BFA_GEMS_CHEAP:
 									gemsCheapEquipped += 1
 							else:
 								gemCount += 1
@@ -1243,12 +1249,12 @@ class WoW():
 						socketData = ' (' + str(sockets - gemCount) + '/' + str(sockets) + ')'
 					
 				enchant = ''
-				if gear in LEGION_ENCHANTSLOTS:
+				if gear in BFA_ENCHANTSLOTS:
 					try:
 						#print(toon['items'][gear]['tooltipParams']['enchant'])
-						if toon['items'][gear]['tooltipParams']['enchant'] in LEGION_ENCHANTS:
+						if toon['items'][gear]['tooltipParams']['enchant'] in BFA_ENCHANTS:
 							pass
-						elif toon['items'][gear]['tooltipParams']['enchant'] in LEGION_ENCHANTS_CHEAP:
+						elif toon['items'][gear]['tooltipParams']['enchant'] in BFA_ENCHANTS_CHEAP:
 							enchant = 'Cheap'
 						else:
 							enchant = 'No'
@@ -1259,10 +1265,10 @@ class WoW():
 							missingEnchants += ', '
 						missingEnchants += enchant + ' ' + gear.capitalize() + ' enchant'
 
-				if int(toon['items'][gear]['quality']) == 5 and (int(toon['items'][gear]['itemLevel']) >= 910 and int(toon['items'][gear]['itemLevel']) <= 1000):
-					totalLegendariesEquipped += 1
-					if int(toon['items'][gear]['itemLevel']) < 1000:
-						legendariesNotUpgraded += 1
+				#if int(toon['items'][gear]['quality']) == 5 and (int(toon['items'][gear]['itemLevel']) >= 910 and int(toon['items'][gear]['itemLevel']) <= 1000):
+				#	totalLegendariesEquipped += 1
+				#	if int(toon['items'][gear]['itemLevel']) < 1000:
+				#		legendariesNotUpgraded += 1
 
 				msg += '\n' + str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - ' + toon['items'][gear]['name'] + ' - <' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + '> '
 				gearData += str(toon['items'][gear]['itemLevel']) + socketData + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')\n'
@@ -1276,7 +1282,7 @@ class WoW():
 		if (not sabersEye and totalSockets > 0):
 			if missingGems != '':
 				missingGems += '\n'
-			missingGems += 'No Saber\'s Eye Equipped!'
+			missingGems += 'No Kraken\'s Eye Equipped!'
 		if (gemsMidTierEquipped > 0):
 			if missingGems != '':
 				missingGems += '\n'
@@ -1300,12 +1306,12 @@ class WoW():
 		embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
 		embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
 		missingStuff = missingEnchants + '\n' + missingGems
-		if (totalLegendariesEquipped < 2):
-			missingStuff += '\nDoesn\'t have the max allowed number of legendaries! Only ' + str(totalLegendariesEquipped) + ' equipped.'
-		if (legendariesNotUpgraded == 1):
-			missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendary not at max level'
-		elif (legendariesNotUpgraded > 1):
-			missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendaries not at max level'
+		#if (totalLegendariesEquipped < 2):
+		#	missingStuff += '\nDoesn\'t have the max allowed number of legendaries! Only ' + str(totalLegendariesEquipped) + ' equipped.'
+		#if (legendariesNotUpgraded == 1):
+		#	missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendary not at max level'
+		#elif (legendariesNotUpgraded > 1):
+		#	missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendaries not at max level'
 		if (missingStuff != '\n'):
 			embed.add_field(name="Gear Check", value=missingStuff, inline=True)
 		#print(toon['name'] + '** of **' + toon['realm'] + str(toon['items']['averageItemLevelEquipped']) + '* equipped, *' + str(toon['items']['averageItemLevel']) + '* total')
