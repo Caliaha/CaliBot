@@ -1290,7 +1290,7 @@ class WoW():
 		if (gemsCheapEquipped > 0):
 			if missingGems != '':
 				missingGems += '\n'
-			missingGems += (gemsCheapEquipped) + ' "pathetic" gems equipped!'
+			missingGems += str(gemsCheapEquipped) + ' "pathetic" gems equipped!'
  
 		if (toon['class']-1) < len(CLASSCOLORS):
 			color = discord.Color(int(CLASSCOLORS[toon['class']-1], 16))
