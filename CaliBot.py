@@ -25,7 +25,7 @@ bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
 
-startup_extensions = [ 'announce', 'color', 'permissions', 'guild_management', 'info', 'settings', 'utils', 'wow', 'wowhead', 'wowtoken' ]
+startup_extensions = [ 'announce', 'color', 'permissions', 'guild_management', 'info', 'maplestory', 'settings', 'utils', 'wow', 'wowhead', 'wowtoken' ]
 
 @bot.event
 async def on_ready():

@@ -72,7 +72,29 @@ class WoW():
 	def __init__(self, bot):
 		self.bot = bot
 		self.lastLookup = {}
- 
+
+	async def getWarcraftLogsGuildID(self, guild, realm):
+		print('getWarcraftLogsGuildID', guild, realm)
+		try:
+			guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+			print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
+		except:
+			return False, False, False
+
+		#guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
+		guildPattern = re.compile('<a href="(.*?)"><span class=".*?">(' + guild + ')</span></a></div><div class="server">US - (' + realm + ')</div></div>', re.IGNORECASE)
+
+		guildMatch = guildPattern.search(guildList)
+		print(guildMatch)
+		if guildMatch is not None:
+			guildPage = await fetchWebpage(self, guildMatch[1])
+			guildIDPattern = re.compile('var guildID = (\d+);')
+			guildIDMatch = guildIDPattern.search(guildPage)
+			if guildIDMatch is not None:
+				print('Returning', guildIDMatch[1], guildMatch[2], guildMatch[3])
+				return guildIDMatch[1], guildMatch[2], guildMatch[3]
+		return False, False, False
+
 	def getCharacterRealm(self, author, toon):
 		snowflakePattern = re.compile('<\@\!?(\d+)>')
 		snowflake = snowflakePattern.match(toon)
@@ -1004,8 +1026,8 @@ class WoW():
 	async def allstars(self, ctx, *args):
 		"""Shows guild allstars performance and realm rankings"""
 		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
-		raidID = { 'ant': '17', 'tomb': '13' }
-		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
+		raidID = { 'uldir': '19', 'ant': '17', 'tomb': '13' }
+		RAIDNAME = { 'uldir': 'Uldir', 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
 
 		try:
 			guild = args[0]
@@ -1025,7 +1047,7 @@ class WoW():
 				difficulty = 'normal'
 				guild = None
 			else:
-				difficulty = "heroic"
+				difficulty = "normal"
 
 		if realm is None:
 			realm = 'Cairne'
@@ -1044,33 +1066,19 @@ class WoW():
 				if raid not in raidID:
 					raise
 			except:
-				raid = 'ant'
+				raid = 'uldir'
 			print(guild, realm)
-			
-			try:
-				guildList = await fetchWebpage(self, "https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-				print("https://www.warcraftlogs.com/search/?term=" + urllib.parse.quote_plus(guild))
-			except:
-				await ctx.send('I was unable to search warcraftlogs.com for that guild')
-				return False
 
-			guildPattern = re.compile('<a href="/guilds/(\d+)">(' + guild + ') on ' + realm + ' \(' + region + '\)</a><br>', re.IGNORECASE)
-
-			print('<a href="/guilds/(\d+)">' + guild + ' on ' + realm + ' \(' + region + '\)</a><br>')
-			guildMatch = guildPattern.search(guildList)
-			print(guildMatch)
-			print("Raid: ", raidID[raid])
-			print("Difficulty: ", difficultyID[difficulty])
-			if guildMatch is not None:
-					guildID = guildMatch[1]
-					guild = guildMatch[2]
-			else:
+			guildID, guild, realm = await self.getWarcraftLogsGuildID(guild, realm)
+			if not guildID:
 				await ctx.send('I was unable to find that guild on warcraftlogs.com, please check your typing and try again')
 				return False
 			print("GuildID: ", guildID)
+			print("Raid: ", raidID[raid])
+			print("Difficulty: ", difficultyID[difficulty])
 			try:
-				guildRankings = await fetchWebpage(self, "https://www.warcraftlogs.com/rankings/guild/" + guildID + "/latest/")
-				serverMatchPattern = re.compile('var filterServer = (\d+);')
+				guildRankings = await fetchWebpage(self, "https://www.warcraftlogs.com/guild/rankings/" + guildID + "/latest/")
+				serverMatchPattern = re.compile('<a id="guildserver" href="/server/id/(\d+)/">') #re.compile('var filterServer = (\d+);')
 				serverMatch = serverMatchPattern.search(guildRankings)
 				print(serverMatch)
 				serverID = serverMatch[1]
@@ -1087,10 +1095,11 @@ class WoW():
 				updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
 			#await ctx.trigger_typing()
 			urls = { }
-			urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/DPS/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-			urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-			urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
-			urls['TANKING - DPS'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			#https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/80702/dps/19/0/3/10/1/Any/Any/rankings/historical/0/best/0
+			urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + str(guildID) + '/dps/' + raidID[raid] + '/0/'+ difficultyID[difficulty] + '/10/1/DPS/Any/rankings/historical/0/best/0'
+			#urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			#urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
+			#urls['TANKING - DPS'] = 'https://www.warcraftlogs.com/rankings/table/dps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 
 			message = '```Guild All Stars for <' + guild + '> ' + difficulty.capitalize() + ' ' + RAIDNAME[raid]
 			didStuff = False
@@ -1103,6 +1112,7 @@ class WoW():
 				#box.addRow( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
 				try:
 					guildData = await fetchWebpage(self, urls[url])
+					print(guildData)
 					totalRequests += 1
 					try:
 						await updateableMessage.edit(content='Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
@@ -1113,31 +1123,56 @@ class WoW():
 					await ctx.send('Something bad happened')
 
 				# Realm Rank, CharacterID, Zone, metric, Name, score
-				characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>([\d,]+).*?</tr>', re.DOTALL)
-				characterClassAndSpecPattern = re.compile('<img src="/img/icons/(.*?)-(.*?)\.jpg" class="players-table-spec-icon">')
+				try:
+					soup = BeautifulSoup(guildData, "lxml")
+				except:
+					await ctx.send('I was unable to parse the webpage with BeautifulSoup')
+					return False
+		
+				reportTable = soup.find('table', {'class':'character-metric-table'})
+				#print(reportTable)
+				
+				rows = reportTable.find_all("tr")
+				for row in rows:
+					data = row.find_all("td")
+					#print('DATA', data)
+					if not data:
+						continue
+					name = data[0].get_text().replace(" ", "").replace("\n", "").replace("\r", "").replace("/tbody>", "")
+					avg = data[1].get_text().replace(" ", "").replace("\n", "").replace("\r", "").replace("/tbody>", "")
+					score = data[-1].get_text().replace(" ", "").replace("\n", "").replace("\r", "").replace("/tbody>", "")
+
+					print(name, avg, score)
+					didStuff = True
+					box.addRow( [ name, avg, score ] )
+				box.sort(2, True)
+				box.setHeader( [ 'Name', 'Average', 'All Star Points' ] )
+				message += '\n' + box.box()
+				#characterPattern = re.compile('<tr.*?<td class="rank.*?">(\d+)<(.*?)<a class="main-table-link.*?href="/rankings/character/(\d+)/(\d+)/#metric=(.*?)".>(.*?)</a>.*?<td class="main-table-number primary players-table-score".*?>([\d,]+).*?</tr>', re.DOTALL)
+				#characterClassAndSpecPattern = re.compile('<img src="/img/icons/(.*?)-(.*?)\.jpg" class="players-table-spec-icon">')
 				
 
-				for character in characterPattern.findall(guildData):
-					#print(character[0], character[1], character[2], character[3], character[4], character[5], character[6])
-					try:
-						classStuff = characterClassAndSpecPattern.search(character[1])
-						playerClass = classStuff[1]
-						playerSpec = classStuff[2]
-					except:
-						print(character)
-						playerClass = 'N/A'
-						playerSpec = 'N/A'
-					best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3], str(difficultyID[difficulty]))
-					totalRequests += 1
-					try:
-						await updateableMessage.edit(content='Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
-					except:
-						print("Couldn't update totals message")
-					didStuff = True
-					box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
-				box.sort(6, True)
-				box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
-				message += '\n' + box.box()
+				#for character in characterPattern.findall(guildData):
+				#	print(character[0], character[1], character[2], character[3], character[4], character[5], character[6])
+				#	try:
+				#		classStuff = characterClassAndSpecPattern.search(character[1])
+				#		playerClass = classStuff[1]
+				#		playerSpec = classStuff[2]
+				#	except:
+				#		print(character)
+				#		playerClass = 'N/A'
+				#		playerSpec = 'N/A'
+				#	best, median, kills = await self.getIndividualPerformance(character[2], character[4], character[3], str(difficultyID[difficulty]))
+				#	totalRequests += 1
+				#	try:
+				#		await updateableMessage.edit(content='Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
+				#	except:
+				#		print("Couldn't update totals message")
+				#	didStuff = True
+				#	box.addRow( [ character[5], playerSpec, float(best), float(median), int(kills), int(character[0]), int(character[6].replace(',', '')) ] )
+				#box.sort(6, True)
+				#box.setHeader( [ 'Name', 'Spec', 'Best', 'Median', 'Kills', 'Realm Rank', 'Score' ] )
+				#message += '\n' + box.box()
 
 			if didStuff:
 				lines = message.splitlines(True)
@@ -1364,8 +1399,10 @@ class WoW():
 		 embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
 		 embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
 
-		RAIDS = [ 'Antorus, the Burning Throne', 'Tomb of Sargeras', 'The Nighthold', 'Trial of Valor', 'The Emerald Nightmare' ]
-		RAID_AOTC = { 'Antorus, the Burning Throne': 12110, 'Tomb of Sargeras': 11874, 'The Nighthold': 11195, 'Trial of Valor': 11581, 'The Emerald Nightmare': 11194 }
+		#RAIDS = [ 'Antorus, the Burning Throne', 'Tomb of Sargeras', 'The Nighthold', 'Trial of Valor', 'The Emerald Nightmare' ]
+		#RAID_AOTC = { 'Antorus, the Burning Throne': 12110, 'Tomb of Sargeras': 11874, 'The Nighthold': 11195, 'Trial of Valor': 11581, 'The Emerald Nightmare': 11194 }
+		RAIDS = [ 'Uldir' ]
+		RAID_AOTC = { 'Uldir' : 12536 }
 		RAID_PROG = { }
 		for raid in RAIDS:
 			RAID_PROG[raid] = { }
