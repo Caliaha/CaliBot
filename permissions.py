@@ -7,7 +7,7 @@ class Permissions():
 	def __init__(self, bot):
 		self.bot = bot
 		self.commands = [ 'color', 'wow' ]
-		self.commandsRoleRestricted = [ 'color', 'set', 'utils', 'voice' ] # Fix this
+		self.commandsRoleRestricted = [ 'color', 'set', 'utils', 'voice', 'raffle' ] # Fix this
 
 	@commands.command(hidden = True)
 	@commands.guild_only()
