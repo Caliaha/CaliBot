@@ -120,5 +120,11 @@ class utils():
 			return False
 		return True
 
+	@commands.command(hidden=True)
+	@superuser()
+	@commands.guild_only()
+	async def purge(self, ctx, amount: int = 10):
+		await ctx.channel.delete_messages(await ctx.channel.history(limit=amount).flatten())
+
 def setup(bot):
 	bot.add_cog(utils(bot))
