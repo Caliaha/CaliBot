@@ -337,3 +337,14 @@ async def postWebdata(self, url, data):
 			print("Failed to grab webpage", url, attempts)
 			attempts += 1
 	raise ValueError('Unable to fetch url')
+
+async def sendBigMessage(self, ctx, message):
+	lines = message.splitlines(True)
+	newMessage = '```'
+	for line in lines:
+		if len(newMessage + line) > 1995:
+			await ctx.send(newMessage + '```')
+			newMessage = '```'
+		newMessage += line
+	if newMessage != '':
+		await ctx.send(newMessage + '```')
