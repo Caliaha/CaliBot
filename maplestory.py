@@ -46,7 +46,7 @@ class MapleStory():
 				if urlMatch:
 					url = urlMatch[1]
 					if not urlparse(url).netloc:
-						url = 'https://maplestory2.nexon.net' + url
+						url = 'http://maplestory2.nexon.net' + url
 					embed.url = url
 				
 				if dateMatch:
@@ -84,7 +84,7 @@ class MapleStory():
 			if name == '':
 				name = url
 			if not urlparse(url).netloc:
-				url = 'https://maplestory2.nexon.com' + url
+				url = 'http://maplestory2.nexon.net' + url
 			#print('[{}]({})'.format(match.group(2), url))
 			return '[{}]({})'.format(name, url)
 
