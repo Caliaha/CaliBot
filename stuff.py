@@ -198,7 +198,10 @@ class BoxIt():
 			return False
 	
 	def sort(self, column, reverse = False):
-		self.data.sort(key=lambda row: row[column], reverse = reverse)
+		try:
+			self.data.sort(key=lambda row: row[column], reverse = reverse)
+		except Exception as e:
+			print(e)
 
 	def setTitle(self, title):
 		self.title = str(title)
