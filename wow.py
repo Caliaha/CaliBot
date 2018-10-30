@@ -1212,23 +1212,41 @@ class WoW():
 	@commands.command()
 	@doThumbs()
 	async def rankings(self, ctx, *args):
-		"""Shows warcraftlogs.com rankings for a guild"""
+		"""Shows warcraftlogs.com rankings for a guild\nUsage: !rankings -g "Guild name" -s "Realm Name" -d [normal|heroic] -r raidname -c [today|historical]"""
 		difficulties = { 'normal': '3', 'heroic': '4' }
-		raids = { 'uldir': 19 }
+		categories = [ 'today', '	ical' ]
+		raids = { 'uldir': '19' }
+		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category' }
+		arguments = { }
+		
+		for i in range(len(args)):
+			if args[i] in validArguments:
+				if i+1 < len(args):
+					arguments[validArguments[args[i]]] = args[i+1]
+		print(arguments)
 		try:
-			difficulty = args[0]
+			guild = arguments['guild']
+		except:
+			guild = False
+		try:
+			realm = arguments['realm']
+		except:
+			realm = "Cairne"
+		try:
+			difficulty = arguments['difficulty']
 			difficulty in difficulties
 		except:
 			difficulty = 'normal'
 		try:
-			guild = args[1]
+			category = arguments['category']
+			category in categories
 		except:
-			guild = False
-		
+			category = 'today'
 		try:
-			realm = args[2]
+			raid = arguments['raid']
+			raid in raids
 		except:
-			realm = "Cairne"
+			raid = 'uldir'
 
 		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
@@ -1242,17 +1260,14 @@ class WoW():
 			guildID, guild, realm = await self.getWarcraftLogsGuildID(guild, realm)
 			if not guildID:
 				return False
-			raid = 'Uldir'
 			
 			title = [ 'Damage Dealers', 'Tanks', 'Healers' ]
 			
-			rankingsURL = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/19/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/historical/1/best/0'
+			rankingsURL = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
 			webpage = await fetchWebpage(self, rankingsURL)
-
 
 			soup = BeautifulSoup(webpage, "html.parser")
 
-			rankingsTables = soup.find('table', { 'class': 'character-metric-table summary-table' })
 			rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
 			bossRankPattern = re.compile('<td class="character-metric-overall-rank (.*?)">\n?(\d+\.\d+|\d+|\-)')
 
@@ -1260,9 +1275,12 @@ class WoW():
 
 			for rankingTable in soup.find_all('table', { 'class': 'character-metric-table summary-table' }):
 				box = BoxIt()
-				box.setTitle('{} of {} for {} on {} difficulty'.format(title[count], guild, raid, difficulty.capitalize()))
+				box.setTitle('{} of {} for {} on {} difficulty'.format(title[count], guild, raid.capitalize(), difficulty.capitalize()))
 				count = count + 1
 				for tr in re.findall('<tr>(.*?)(?=<tr>|</table>)', str(rankingTable), re.DOTALL):
+					tr = re.sub('<img class="wrong-spec-icon" src=".*?"/>\n', '', tr)
+					tr = re.sub(' wrong-spec', '', tr)
+					
 					rankingMatch = rankingPattern.search(str(tr))
 					if rankingMatch:
 						characterData = ([ rankingMatch[2] ])
