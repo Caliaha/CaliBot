@@ -169,7 +169,7 @@ class Raffle():
 				async with connection.cursor() as cursor:
 					winners = { }
 					tickets = { }
-					testIterations = 100000
+					testIterations = 10000
 					for j in range(testIterations):
 						sql = "SELECT `discordID`, `tickets` FROM `raffle` WHERE `guildID`=%s"
 						await cursor.execute(sql, (ctx.guild.id))
