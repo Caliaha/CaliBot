@@ -1208,6 +1208,76 @@ class WoW():
 				if socket['type'] == 'PRISMATIC':
 					count += 1
 		return count
+
+	@commands.command()
+	@doThumbs()
+	async def rankings(self, ctx, *args):
+		"""Shows warcraftlogs.com rankings for a guild"""
+		difficulties = { 'normal': '3', 'heroic': '4' }
+		raids = { 'uldir': 19 }
+		try:
+			difficulty = args[0]
+			difficulty in difficulties
+		except:
+			difficulty = 'normal'
+		try:
+			guild = args[1]
+		except:
+			guild = False
+		
+		try:
+			realm = args[2]
+		except:
+			realm = "Cairne"
+
+		if (not guild and ctx.guild is not None):
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
+
+		try:
+			await updateableMessage.delete()
+		except:
+			pass
+
+		async with ctx.channel.typing():
+			guildID, guild, realm = await self.getWarcraftLogsGuildID(guild, realm)
+			if not guildID:
+				return False
+			raid = 'Uldir'
+			
+			title = [ 'Damage Dealers', 'Tanks', 'Healers' ]
+			
+			rankingsURL = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/19/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/historical/1/best/0'
+			webpage = await fetchWebpage(self, rankingsURL)
+
+
+			soup = BeautifulSoup(webpage, "html.parser")
+
+			rankingsTables = soup.find('table', { 'class': 'character-metric-table summary-table' })
+			rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
+			bossRankPattern = re.compile('<td class="character-metric-overall-rank (.*?)">\n?(\d+\.\d+|\d+|\-)')
+
+			count = 0
+
+			for rankingTable in soup.find_all('table', { 'class': 'character-metric-table summary-table' }):
+				box = BoxIt()
+				box.setTitle('{} of {} for {} on {} difficulty'.format(title[count], guild, raid, difficulty.capitalize()))
+				count = count + 1
+				for tr in re.findall('<tr>(.*?)(?=<tr>|</table>)', str(rankingTable), re.DOTALL):
+					rankingMatch = rankingPattern.search(str(tr))
+					if rankingMatch:
+						characterData = ([ rankingMatch[2] ])
+						for bossRanks in bossRankPattern.findall(tr):
+							if bossRanks[1] == '-':
+								characterData.append(bossRanks[1])
+							elif re.search('\.', bossRanks[1]):
+								characterData.append(float(bossRanks[1]))
+							else:
+								characterData.append(int(bossRanks[1]))
+						box.addRow(characterData)
+				box.sort(10, True)
+				box.setHeader( ['Name', 'Avg', 'Taloc', 'Mom', 'Devourer', 'Zek', 'Vect', 'Zul', 'Myth', 'G\'huun', '*'] )
+				await self.sendBulkyMessage(ctx, box.box(), '```', '```')
+		return True
 	
 	@commands.command()
 	@doThumbs()
