@@ -592,83 +592,69 @@ class WoW():
 			return False
   
 		try:
-			await fetchWebpage(self, 'https://www.warcraftlogs.com/tracker/updatecharacter/' + characterID[1])
+			await fetchWebpage(self, 'https://www.warcraftlogs.com/character/update/' + characterID[1])
 		except:
 			print('Failed to request warcraftlogs update for ' + character + '-' + realm)
 
-		characterNameRealmPattern = re.compile('(.*?) on (.*?) - Warcraft Logs')
+		characterNameRealmPattern = re.compile('(.*?) - (.*?) - Warcraft Logs')
 		characterNameRealm = characterNameRealmPattern.search(characterIDPage)
-		characterClassPattern = re.compile('<div id="character-class" class=".*?">\r\n(.*?) \r\n(.*?)</div>')
+		characterClassPattern = re.compile('<div id="character-class" class="(.*?)">')
 		characterClass = characterClassPattern.search(characterIDPage)
 		characterPortraitPattern = re.compile('<img id="character-portrait-image" src="(.*?)">')
 		characterPortrait = characterPortraitPattern.search(characterIDPage)
 
-		statsPattern = re.compile('<div class="stats" id="stats-10-(\d)-Any-Any">\n<div class="best-perf-avg">\nBest Perf. Avg<br>\n<b style="font-size:32px" class="(.*?)">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class="(.*?)">\n(.*?)<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(.*?)\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)<tr><td colspan=2 style="font-size:10px;">Out of (.*?) possible All Star Points</td></tr>\n</table>\n</div>')
-		RankingMetrics = [ 'dps', 'hps' ]
-		selectedRankingZone = '17' # Tomb of Sargeras
+		#statsPattern = re.compile('<div class="stats" id="stats-10-(\d)-Any-Any">\n<div class="best-perf-avg">\nBest Perf. Avg<br>\n<b style="font-size:32px" class="(.*?)">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class="(.*?)">\n(.*?)<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(.*?)\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)<tr><td colspan=2 style="font-size:10px;">Out of (.*?) possible All Star Points</td></tr>\n</table>\n</div>')
+		statsPattern = re.compile('Best Perf. Avg<br>\n<b style="font-size:32px" class=".*?">(.*?)</b>\n</div>\n<table class="median-and-all-star"><tr><td style="text-align:right">Median Perf. Avg:<td style="text-align:left" class=".*?">\n(.*?)\n<tr><td style="text-align:right">Kills Ranked:<td style="text-align:left">(\d+)\n.*?\n<tr><td style="text-align:right">All Star Points:<td style="text-align:left" class="primary">(.*?)\n\n.*?\n <img src=".*?">\n\n<tr><td colspan=2 style="font-size:10px;">Out of 960 possible All Star Points</td>')
+		RankingMetrics = { '***Damage***': 'dps', '***Healing***': 'hps' }
+		difficulties = { 'heroic': '4', 'normal': '3' }
+		selectedRankingZone = '19' # Uldir
 
 		color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))
-		print(characterClass)
+
 		if characterClass is not None:
-			if characterClass[2].lower() in CLASSCOLORS_FULL:
-				color = discord.Color(int(CLASSCOLORS_FULL[characterClass[2].lower()], 16))
+			if characterClass[1].lower() in CLASSCOLORS_FULL:
+				color = discord.Color(int(CLASSCOLORS_FULL[characterClass[1].lower()], 16))
  
 		embed=discord.Embed(title='WarcraftLogs Data', url='https://www.warcraftlogs.com/character/us/' + realm + '/' + character, color=color)
-		
+
 		if characterPortrait is not None:
 			embed.set_thumbnail(url='https:' + characterPortrait[1] + '?' + str(time.time()))
 
-		warcraftLogsMessage = '**Warcraft Logs Data'
 		if characterClass is not None and characterNameRealm is not None:
-			warcraftLogsMessage += " for " + characterNameRealm[1] + '-' + characterNameRealm[2] + " " + characterClass[1] + ' ' + characterClass[2] + '**\n'
-			embed.description = characterClass[1] + ' ' + characterClass[2]
-			warcraftLogsMessage += '<https://www.warcraftlogs.com/character/us/' + realm + '/' + character + '>\n'
-		else:
-			warcraftLogsMessage += '**\n'
-		for RankingMetric in RankingMetrics:
-			try:
-				statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/rankings/character_rankings_compact/' + characterID[1] + '/' + selectedRankingZone + '/' + RankingMetric)
-			except:
-				print("Exception while accessing statsDataPage")
-				await ctx.send('An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
-				return False
-			statsData = statsPattern.findall(statsDataPage)
-			if statsData is None:
-				await ctx.send('No warcraftlogs data found, this is very likely a regex error.')
-				return False
-  
-			if RankingMetric is 'hps':
-				warcraftLogsMessage += ' ***HEALING:***\n'
-			if RankingMetric is 'dps':
-				warcraftLogsMessage += ' ***DAMAGE:***\n'
-			didStuff = False
-			embedData = ''
-			for statData in statsData:
-				difficulty = 'Unknown';
-   
-				if statData[2] is not '-':
-					didStuff = True
-					if statData[0] is '5': difficulty = '  **Mythic:**'
-					if statData[0] is '4': difficulty = '  **Heroic:**'
-					if statData[0] is '3': difficulty = '  **Normal:**'
-					if statData[0] is '2': difficulty = '  **LFR Maybe?:**'
-  
-					warcraftLogsMessage += difficulty + '\n   Best Performance Avg -> ' + statData[2] + '\n   Median Performance Avg -> ' + statData[4] + '\n   Kills Ranked -> ' + statData[5] + '\n   All Star Points -> ' + statData[6] + ' Out of ' + statData[7] + ' Possible\n'
-					embedData += difficulty + '\n   Best Performance Avg -> ' + statData[2] + '\n   Median Performance Avg -> ' + statData[4] + '\n   Kills Ranked -> ' + statData[5] + '\n   All Star Points -> ' + statData[6] + ' Out of ' + statData[7] + ' Possible\n'
-			catName = 'Fix Me'
-			if RankingMetric is 'hps':
-				catName = '***HEALING***'
-			if RankingMetric is 'dps':
-				catName = '***DAMAGE***'
-			embed.add_field(name=catName, value=embedData, inline=True)
+			embed.description = '{} @ {} - {}'.format(characterNameRealm[1], characterNameRealm[2], characterClass[1])
 
+		characterData = { }
+		characterData['heroic'] = { }
+		characterData['normal'] = { }
+		characterData['heroic']['dps'] = { 'best': 'N/A', 'median': 'N/A', 'killsRanked': 'N/A', 'allStars': 'N/A' }
+		characterData['heroic']['hps'] = { 'best': 'N/A', 'median': 'N/A', 'killsRanked': 'N/A', 'allStars': 'N/A' }
+		characterData['normal']['dps'] = { 'best': 'N/A', 'median': 'N/A', 'killsRanked': 'N/A', 'allStars': 'N/A' }
+		characterData['normal']['hps'] = { 'best': 'N/A', 'median': 'N/A', 'killsRanked': 'N/A', 'allStars': 'N/A' }
+		didStuff = False
+		for difficulty, difficultyID in difficulties.items():
+			for RankingMetricName, RankingMetric in RankingMetrics.items():
+				try:
+					#Overall:	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/4/0/0
+					#ItemLvl:	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/4/1/0
+					#Normal :	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/3/1/0
+					statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/character/rankings-compact/' + characterID[1] + '/Best/' + selectedRankingZone + '/' + RankingMetric + '/' + difficultyID + '/1/0')
+				except:
+					print("Exception while accessing statsDataPage")
+					await ctx.send('An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
+					return False
+				statData = statsPattern.search(statsDataPage)
+				if statData:
+					characterData[difficulty][RankingMetric] = { 'best': statData[1], 'median': statData[2], 'killsRanked': statData[3], 'allStars': statData[4] }
+					didStuff = True
 
 		if didStuff:
 			try:
+				for RankingMetricName, RankingMetric in RankingMetrics.items():
+					embed.add_field(name=RankingMetricName, value='Best Performance Avg -> {} normal, {} heroic\nMedian Performance Avg -> {} normal, {} heroic\nKills Ranked -> {} normal, {} heroic\nAll Star Points -> {} normal, {} heroic'.format(characterData['normal'][RankingMetric]['best'], characterData['heroic'][RankingMetric]['best'], characterData['normal'][RankingMetric]['median'], characterData['heroic'][RankingMetric]['median'], characterData['normal'][RankingMetric]['killsRanked'], characterData['heroic'][RankingMetric]['killsRanked'], characterData['normal'][RankingMetric]['allStars'], characterData['heroic'][RankingMetric]['allStars']))
 				await ctx.send(embed=embed)
 			except discord.HTTPException as e:
 				print(e)
-				await ctx.send(warcraftLogsMessage)
+				return False
 			return True
 		else:
 			await ctx.send('No warcraftlogs data found or bad regex')
@@ -1212,18 +1198,23 @@ class WoW():
 	@commands.command()
 	@doThumbs()
 	async def rankings(self, ctx, *args):
-		"""Shows warcraftlogs.com rankings for a guild\nUsage: !rankings -g "Guild name" -s "Realm Name" -d [normal|heroic] -r raidname -c [today|historical]"""
+		"""Shows warcraftlogs.com rankings for a guild"""
 		difficulties = { 'normal': '3', 'heroic': '4' }
-		categories = [ 'today', '	ical' ]
+		categories = [ 'today', 'historical' ]
 		raids = { 'uldir': '19' }
-		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category' }
+		sortCategories = { 'performance': 1, 'allstars': 10 }
+		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort' }
 		arguments = { }
+		
+		if args[0] == 'help' or args[0] == '-h':
+			await ctx.send('Usage: !rankings -g "guild name" -s "realm name" -d [normal|heroic] -r raidname -c [today|historical] -t [performance|allstars]\nAll arguments are optional.')
+			return True
 		
 		for i in range(len(args)):
 			if args[i] in validArguments:
 				if i+1 < len(args):
 					arguments[validArguments[args[i]]] = args[i+1]
-		print(arguments)
+
 		try:
 			guild = arguments['guild']
 		except:
@@ -1247,6 +1238,11 @@ class WoW():
 			raid in raids
 		except:
 			raid = 'uldir'
+		try:
+			sort = arguments['sort']
+			sort in sortCategories
+		except:
+			sort = 'performance'
 
 		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
@@ -1260,23 +1256,21 @@ class WoW():
 			guildID, guild, realm = await self.getWarcraftLogsGuildID(guild, realm)
 			if not guildID:
 				return False
-			
-			title = [ 'Damage Dealers', 'Tanks', 'Healers' ]
-			
-			rankingsURL = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
-			webpage = await fetchWebpage(self, rankingsURL)
 
-			soup = BeautifulSoup(webpage, "html.parser")
+			urls = { }
+			urls['Damage Dealers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
+			urls['Healers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/hps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
 
-			rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
-			bossRankPattern = re.compile('<td class="character-metric-overall-rank (.*?)">\n?(\d+\.\d+|\d+|\-)')
+			for title, url in urls.items():
+				webpage = await fetchWebpage(self, url)
+				soup = BeautifulSoup(webpage, "html.parser")
 
-			count = 0
+				rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
+				bossRankPattern = re.compile('<td class="character-metric-overall-rank (.*?)">\n?(\d+\.\d+|\d+|\-)')
 
-			for rankingTable in soup.find_all('table', { 'class': 'character-metric-table summary-table' }):
+				rankingTable = soup.find('table', { 'class': 'character-metric-table summary-table' })
 				box = BoxIt()
-				box.setTitle('{} of {} for {} on {} difficulty'.format(title[count], guild, raid.capitalize(), difficulty.capitalize()))
-				count = count + 1
+				box.setTitle('{} of {} for {} on {} difficulty'.format(title, guild, raid.capitalize(), difficulty.capitalize()))
 				for tr in re.findall('<tr>(.*?)(?=<tr>|</table>)', str(rankingTable), re.DOTALL):
 					tr = re.sub('<img class="wrong-spec-icon" src=".*?"/>\n', '', tr)
 					tr = re.sub(' wrong-spec', '', tr)
@@ -1292,7 +1286,7 @@ class WoW():
 							else:
 								characterData.append(int(bossRanks[1]))
 						box.addRow(characterData)
-				box.sort(10, True)
+				box.sort(sortCategories[sort], True)
 				box.setHeader( ['Name', 'Avg', 'Taloc', 'Mom', 'Devourer', 'Zek', 'Vect', 'Zul', 'Myth', 'G\'huun', '*'] )
 				await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 		return True
@@ -1541,9 +1535,9 @@ class WoW():
 			embed.add_field(name='Progression', value=progressionMessage)
 
 		hasAOTC = True
-		if 12111 in toon['achievements']['achievementsCompleted']:
+		if 12535 in toon['achievements']['achievementsCompleted']:
 			embed.description = 'Has *Cutting Edge* for the current tier'
-		elif 12110 in toon['achievements']['achievementsCompleted']:
+		elif 12536 in toon['achievements']['achievementsCompleted']:
 			embed.description = 'Has *AOTC* for the current tier'
 		else:
 			hasAOTC = False
