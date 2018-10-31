@@ -1206,7 +1206,7 @@ class WoW():
 		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort' }
 		arguments = { }
 		
-		if args[0] == 'help' or args[0] == '-h':
+		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
 			await ctx.send('Usage: !rankings -g "guild name" -s "realm name" -d [normal|heroic] -r raidname -c [today|historical] -t [performance|allstars]\nAll arguments are optional.')
 			return True
 		
