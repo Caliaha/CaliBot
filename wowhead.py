@@ -30,7 +30,7 @@ class WowHead():
 				embed = discord.Embed(title='Test', description='Beep', url='https://www.google.com', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 				postID = div.get('id')
 				if postID is None:
-				 print('PostID was None, skipping')
+				 #print('PostID was None, skipping')
 				 continue
 
 				for h1 in div.find_all('h1', class_ = 'heading-size-1'):
@@ -47,7 +47,7 @@ class WowHead():
 					if 'class' in a.attrs:
 						if 'news-post-teaser-image' in a.get('class'):
 							url = a.get('href')
-							print('Setting url to', url)
+							#print('Setting url to', url)
 							if not urlparse(url).netloc:
 								url = 'https://www.wowhead.com' + url
 							embed.url = url
@@ -57,8 +57,8 @@ class WowHead():
 								linkMatch = linkPattern.search(style)
 								
 								if (linkMatch):
-									print(linkMatch[1])
-									print('Added image', linkMatch[1])
+									#print(linkMatch[1])
+									#print('Added image', linkMatch[1])
 									embed.set_image(url=linkMatch[1]) #url='http://' +
 						if 'news-post-type' in a.get('class'):
 							if (a.text):
@@ -88,7 +88,7 @@ class WowHead():
 					for channel in guild.text_channels:
 						if channel.name == 'wowhead':
 							if not await self.checkIfPosted(guild.id, postID):
-								print("Not posted")
+								#print("Not posted")
 								await channel.send(embed=embed)
 								await self.storePostedData(guild.id, postID)
 							break
@@ -132,7 +132,7 @@ class WowHead():
 			text = re.sub(r'\\r\\n', '\n', text)
 		
 		if type == 'html':
-			print('Start', text)
+			#print('Start', text)
 			text = text.replace('\"', '"')
 			text = text.replace('\\\\', '\\')
 			text = text.replace('\/', '/')
@@ -151,7 +151,7 @@ class WowHead():
 			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
 			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
 
-		print(type, text)
+		#print(type, text)
 		return text
 
 	async def storePostedData(self, guildID, postID):
@@ -167,7 +167,7 @@ class WowHead():
 			connection.close()
 
 	async def checkIfPosted(self, guildID, postID):
-		print(guildID, postID)
+		#print(guildID, postID)
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
