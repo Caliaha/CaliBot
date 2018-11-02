@@ -172,7 +172,7 @@ class WoW():
 		affixes = { affix1[1] : affix1[2], affix2[1] : affix2[2], affix3[1] : affix3[2], affix4[1] : affix4[2] }
 		succeded = 0
 		for affix in affixes:
-			affixDescP = re.compile('<div id="infobox-alternate-position"></div>(.*?)(\n|<div)')
+			affixDescP = re.compile('</div>\n(.*?)\n<h2.*?</h2>\n</div>')
 			wowheadAffixData = await fetchWebpage(self, 'https://www.wowhead.com' + affix)
 			if wowheadAffixData is not False:
 				affixDesc = affixDescP.search(wowheadAffixData)
@@ -1078,10 +1078,11 @@ class WoW():
 			try:
 				updateableMessage
 			except:
-				updateableMessage = await ctx.send('Performing lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
+				updateableMessage = await ctx.send('This command is obsolete, please use the !rankings command.\nPerforming lookup for <' + guild + '> on ' + realm + '\nThis will take a bit! Total Requests Made: ' + str(totalRequests), delete_after=120)
 			#await ctx.trigger_typing()
 			urls = { }
 			#https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/80702/dps/19/0/3/10/1/Any/Any/rankings/historical/0/best/0
+			urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + str(guildID) + '/dps/' + raidID[raid] + '/0/'+ difficultyID[difficulty] + '/10/1/DPS/Any/rankings/historical/0/best/0'
 			urls['DAMAGE'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + str(guildID) + '/dps/' + raidID[raid] + '/0/'+ difficultyID[difficulty] + '/10/1/DPS/Any/rankings/historical/0/best/0'
 			#urls['HEALING'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Healers/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
 			#urls['TANKING - HPS'] = 'https://www.warcraftlogs.com/rankings/table/hps/' + raidID[raid] + '/-1/'+ difficultyID[difficulty] + '/25/1/Tanks/Any/0/' + serverID + '/0/0/' + guildID + '/?search=&page=1&keystone=0'
