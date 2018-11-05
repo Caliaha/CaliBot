@@ -20,17 +20,18 @@ class RoleColor():
 		regex = re.compile("^[0-9a-fA-F]{6}$")
 		return True if regex.match(hex) is not None else False
 
-		async def bulk_remove(): # Later make this check and make sure that everyone who has a color role is still present in the guild
-			pass
+	async def bulk_remove(): # Later make this check and make sure that everyone who has a color role is still present in the guild
+		pass
 
-		async def on_ready(self):
-			await self.bulk_remove()
+	async def on_ready(self):
+		await self.bulk_remove()
 
 	@commands.command()
 	@commands.guild_only()
 	@superuser()
 	@doThumbs()
 	async def removeallcolors(self, ctx, confirm=None):
+		"""Removes all colors from everyone"""
 		regex =re.compile("^Color: \d{18}$")
 		rolesToDelete = []
 		for role in ctx.guild.roles:
@@ -52,6 +53,7 @@ class RoleColor():
 	@doThumbs()
 	@checkPermissions('color')
 	async def removecolor(self, ctx, otherMember: discord.Member=None):
+		"""Sets your color back to default"""
 		if otherMember is not None:
 			if await checkPermission(self, ctx, 'set') is True:
 				member = otherMember
@@ -78,6 +80,7 @@ class RoleColor():
 	@doThumbs()
 	@checkPermissions('color')
 	async def colorme(self, ctx, colorcode: str, otherMember: discord.Member=None):
+		"""Changes your color in discord"""
 		newcolor = None
 		colorcode = colorcode.lower()
 		print(colorcode)
@@ -112,7 +115,7 @@ class RoleColor():
 		role = discord.utils.get(ctx.message.guild.roles, name=colorrole)
 		botrole = discord.utils.get(ctx.message.guild.roles, name=self.bot.NAME)
 		if botrole is None:
-			print('CaliBot role not found in channel')
+			print('CaliBot role not found in guild')
 			return False
 		else:
 			botrole = botrole.position
@@ -121,7 +124,6 @@ class RoleColor():
 		if role:
 			print("Changing color for", member.name, "with role", role, "to", newcolor)
 			try:
-				#await self.bot.edit_role(ctx.message.server, role, name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
 				await role.edit(name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
 			except:
 				failed = True
@@ -129,7 +131,6 @@ class RoleColor():
 		else:
 			print("Creating color for role", colorrole, "to", newcolor)
 			try:
-				#role = await self.bot.create_role(ctx.message.server, name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
 				role = await ctx.guild.create_role(name = colorrole, permissions = discord.Permissions.none(), color = newcolor, hoist = False, mentionable = False)
 			except Exception as e:
 				print(e)
@@ -137,13 +138,11 @@ class RoleColor():
 
 			
 		try:
-			#await self.bot.add_roles(ctx.message.author, role)
 			await member.add_roles(role, reason = 'CaliBot !colorme', atomic=True)
 		except:
 			failed = True
 			print("Failed to add role to member")
 		try:
-			#await self.bot.move_role(ctx.message.server, role, botrole)
 			await role.edit(position = botrole)
 		except:
 			print("Failed to move role to higher location")

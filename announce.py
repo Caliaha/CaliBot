@@ -29,8 +29,7 @@ class Announce():
 			print("Unable to change nickname")
 
 	async def playTTS(self):
-		while not self.bot.is_closed():
-			#self.control.clear()
+		while true:
 			tts = await self.queue.get()
 			guild = tts["guild"]
 			print(tts["guild"])
@@ -40,28 +39,22 @@ class Announce():
 				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', self.file, tts["message"]])
 				(output, err) = process.communicate()
 				exit_code = process.wait()
- 
-				voice = guild.voice_client
-				
-				if (not voice.is_connected()):
+
+				if (not guild.voice.is_connected()):
 					print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
 				else:
 					try:
-						voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
+						guild.voice.play(discord.FFmpegPCMAudio("./calibot.wav"))
 					except Exception as e:
 						print(e, 'Error in voice.play')
-					#player = self.VOICE_CHANNELS[guild.id].FFmpegPCMAudio("./calibot.wav", after=self.control.set)
-					#player.start()
-					#self.VOICE_CHANNELS[guild.id].player = player
-					#await self.control.wait()
+
 					print('Sleeping while playing')
-					while(voice.is_playing()): #FIX ME
-						#print('sleeping')
+					while(guild.voice.is_playing()): #FIX ME
 						asyncio.sleep(0.1)
 					print('Done sleeping')
-					await self.updateNickname(tts["guild"], None)
 			else:
 				print("I was asked to announce for something that I do not have a voice_client for")
+			await self.updateNickname(tts["guild"], None)
 
 	async def fetchPhoneticName(self, member):
 		try:
@@ -85,7 +78,7 @@ class Announce():
 
 	async def inactivityCheck(self):
 		await self.bot.wait_until_ready()
-		while not self.bot.is_closed():
+		while true:
 			for voiceClient in self.bot.voice_clients:
 				if self.countNonBotMembers(voiceClient.channel.members) == 0:
 					print('Leaving channel {} on guild {} because of inactivity'.format(voiceClient.channel, voiceClient.guild))
@@ -241,9 +234,6 @@ class Announce():
 				await self.updateDB(guild.id, channel.id)
 				return True
 			return False
-		else:
-			await ctx.send("I couldn't figure out which voice channel you were in.")
-			return False
 
 	async def on_ready(self):
 		print("Attempting to reconnect to all voice channels")
@@ -270,7 +260,7 @@ class Announce():
 			print("Resetting nickname for", guild.name)
 			await self.updateNickname(guild, None)
 
-	@commands.command(description="Bot will join your voice channel and announces who joins or leaves the voice channel you are in, limit one per guild")
+	@commands.command()
 	@commands.guild_only()
 	async def announce(self, ctx):
 		"""Bot announces who joins or leaves your voice channel"""
@@ -340,7 +330,6 @@ class Announce():
 				for member in listToMove: # I do this because moving during channel.voice_members iteration caused it to stop short
 					count2 = count2 + 1
 					try:
-						#await self.bot.move_member(member, destinationChannel)
 						await member.move_to(destinationChannel, reason='Deathgripped')
 						print("Moving {} to {}".format(member.name, destinationChannel.name))
 					except discord.Forbidden as e:
@@ -371,12 +360,6 @@ class Announce():
 	@doThumbs()
 	async def mdgignore(self, ctx, channel : discord.VoiceChannel = None):
 		"""Adds channel to ignore list, bot will not pull members from this channel"""
-		print(channel)
-#		try:
-#			id = channel.id
-#		except:
-#			await self.bot.say('I was unable to get the id for that channel, please double check that you spelled it correctly.')
-#			return False
 
 		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 		try:

@@ -189,47 +189,6 @@ class WoW():
 		else:
 			return False
 
-	@commands.command()
-	async def ach(self, ctx, *, achievement):
-		"""Search for achievements"""
-		print('Beep Boop', achievement)
-		count = 0
-		try:
-			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			with connection.cursor() as cursor:
-				sql = "SELECT `id`, `title`, `description` FROM `wow_achievements` WHERE MATCH(`title`, `description`) AGAINST(%s)"
-				cursor.execute(sql, (achievement))
-				results = cursor.fetchall()
-				print(cursor.rowcount)
-				count = cursor.rowcount
-				#print(results)
-		except Exception as e:
-			#ctx.send('Error searching database')
-			print(e)
-			return False
-		finally:
-			connection.close()
-		
-		
-		#embed.set_thumbnail(url='https://render-us.worldofwarcraft.com/character/' + toon['thumbnail'])
-		msg = ''
-		for result in results:
-			msg += '[{}](https://www.wowhead.com/achievement={}) {}\n'.format(result['title'], result['id'], result['description'])
-			#if cursor.rowcount <= 3:
-				
-			print(result['title'], result['description'])
-		print(count)
-		if count == 0:
-			await ctx.send('No results found')
-			return False
-		elif count <= 20:
-			color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))
-			embed = discord.Embed(title='Achievements Found', description=msg,url='https://www.google.com', color=color)
-			await ctx.send(embed=embed)
-			return True
-		else:
-			await ctx.send('Too many results found, please narrow your search')
-
 	@commands.command(description='Set default character/realm combo for WoW commands')
 	async def setmain(self, ctx, *, toon: str):
 		"""Set your default character to be used by other commands"""
@@ -682,6 +641,7 @@ class WoW():
 	@superuser()
 	@commands.guild_only()
 	async def defaultguild(self, ctx, *args):
+		"""Sets default guild/realm for this discord server"""
 		try:
 			guild = args[0]
 			realm = args[1]
@@ -749,10 +709,13 @@ class WoW():
 			
 		return attendance
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@doThumbs()
 	async def guildperf(self, ctx, *args):
 		"""Shows performance data for guild"""
+		await ctx.send('This command is outdated, please use !rankings instead')
+		return False
+
 		difficultyID = { 'normal': '3', 'heroic': '4', 'mythic': '5' }
 		raidID = { 'ant': '17', 'tomb': '13' }
 		RAIDNAME = { 'ant': 'Antorus', 'tomb': 'Tomb of Sargeras' }
@@ -1000,7 +963,7 @@ class WoW():
 			return False
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@doThumbs()
 	async def allstars(self, ctx, *args):
 		"""Shows guild allstars performance and realm rankings"""

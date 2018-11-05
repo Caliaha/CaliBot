@@ -46,7 +46,7 @@ class utils():
 	@commands.command()
 	@doThumbs()
 	async def uptime(self, ctx):
-		"""Shows how long CaliBot and the computer running it has been online"""
+		"""Uptime of bot and it's computer"""
 		await ctx.send(self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
 		await ctx.send('Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
 		return True
