@@ -38,7 +38,6 @@ async def on_ready():
 #	ctx.send('Beep')
 
 if __name__ == "__main__":
-	#bot.load_extension('announce')
 	for extension in startup_extensions:
 		#try:
 		bot.load_extension(extension)
