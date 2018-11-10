@@ -20,11 +20,11 @@ class RoleColor():
 		regex = re.compile("^[0-9a-fA-F]{6}$")
 		return True if regex.match(hex) is not None else False
 
-	async def bulk_remove(): # Later make this check and make sure that everyone who has a color role is still present in the guild
-		pass
+	#async def bulk_remove(self): # Later make this check and make sure that everyone who has a color role is still present in the guild
+	#	pass
 
-	async def on_ready(self):
-		await self.bulk_remove()
+	#async def on_ready(self):
+	#	await self.bulk_remove()
 
 	@commands.command()
 	@commands.guild_only()
