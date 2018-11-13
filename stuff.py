@@ -304,7 +304,7 @@ async def fetchWebpage(self, url, binary=False):
 	headers = { 'User-Agent' : self.bot.USER_AGENT }
 	while attempts < 15:
 		try:
-			with async_timeout.timeout(15):
+			with async_timeout.timeout(25):
 				async with self.bot.SESSION.get(url, headers=headers) as r:
 					if r.status == 200:
 						if binary:
