@@ -589,7 +589,8 @@ class WoW():
 					#Overall:	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/4/0/0
 					#ItemLvl:	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/4/1/0
 					#Normal :	https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/3/1/0
-					statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/character/rankings-compact/' + characterID[1] + '/Best/' + selectedRankingZone + '/' + RankingMetric + '/' + difficultyID + '/1/0')
+					#			https://www.warcraftlogs.com/character/rankings-compact/6818049/Best/19/hps/4/1/0/0
+					statsDataPage = await fetchWebpage(self, 'https://www.warcraftlogs.com/character/rankings-compact/' + characterID[1] + '/Best/' + selectedRankingZone + '/' + RankingMetric + '/' + difficultyID + '/1/0/0')
 				except:
 					print("Exception while accessing statsDataPage")
 					await ctx.send('An Exception has occurred for some reason.  Could be website not found, network things, cosmic rays, or I goofed up. Maybe try your request again?')
@@ -1215,8 +1216,8 @@ class WoW():
 				return False
 
 			urls = { }
-			urls['Damage Dealers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
-			urls['Healers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/hps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0'
+			urls['Damage Dealers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0/0'
+			urls['Healers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/hps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0/0'
 
 			for title, url in urls.items():
 				webpage = await fetchWebpage(self, url)
