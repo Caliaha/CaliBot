@@ -135,9 +135,8 @@ class Announce():
 			finally:
 				connection.close()
 
-		if member.guild.voice_client and guild.id in self.guildQueue:		#guild.id in self.guildQueue
+		if member.guild.voice_client and member.guild.voice_client.is_connected():		#guild.id in self.guildQueue
 			if self.countNonBotMembers(member.guild.voice_client.channel.members) == 0:
-
 				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
 					print('Moving to {} because our channel is empty'.format(after.channel))
 					await self.joinOrMove(guild, after.channel)
@@ -153,6 +152,10 @@ class Announce():
 					await self.updateNickname(guild, None)
 					return
 		else:
+			if member.guild.voice_client and not member.guild.voice_client.is_connected():
+				# If we have a voice client but aren't connected then force disconnect
+				print('I have a voice_client for {} but I\'m not connected'.format(member.guild))
+				await self.leaveVoiceChannel(guild, after.channel)
 			if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
 				print('Joining {} because someone has entered a valid voice channel'.format(after.channel))
 				await self.joinOrMove(guild, after.channel)
@@ -232,6 +235,7 @@ class Announce():
 			print("Attempting to change voice channels")
 			if await guild.voice_client.move_to(channel):
 				await self.updateDB(guild.id, channel.id)
+				print("Succeeded")
 				return True
 			return False
  
