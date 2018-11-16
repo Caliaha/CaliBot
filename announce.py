@@ -161,6 +161,10 @@ class Announce():
 				await self.joinOrMove(guild, after.channel)
 				return
 
+		# Currently if someone leaves a channel and we aren't connected to voice, this part may produce an error
+		# The above logic only creates a voiceclient if someone is joining or moving channels
+		# If we have no voice client and someone leaves, it does nothing and still runs this part below
+		# FIX ME
 		guild = member.guild
 		voiceBefore = before.channel
 		voiceAfter = after.channel
@@ -232,11 +236,13 @@ class Announce():
 				print('Leaving voice channel {}'.format(channel.name))
 				await self.leaveVoiceChannel(guild, channel)
 				return True
-			print("Attempting to change voice channels")
+			print("Attempting to change voice channels to {}".format(channel))
 			if await guild.voice_client.move_to(channel):
 				await self.updateDB(guild.id, channel.id)
 				print("Succeeded")
 				return True
+			else:
+				print("Failed")
 			return False
  
 		if channel is not None:
