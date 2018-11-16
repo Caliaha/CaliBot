@@ -118,8 +118,6 @@ class Announce():
 		if guild.id not in self.allowedGuilds:
 		 print("Guild {} not in list of allowed guilds".format(guild.name))
 		 return
-		 
-
 
 		if guild.id not in self.ignored_channels:
 			self.ignored_channels[guild.id] = []
@@ -137,7 +135,7 @@ class Announce():
 			finally:
 				connection.close()
 
-		if member.guild.voice_client:
+		if member.guild.voice_client and guild.id in self.guildQueue:		#guild.id in self.guildQueue
 			if self.countNonBotMembers(member.guild.voice_client.channel.members) == 0:
 
 				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
