@@ -116,6 +116,10 @@ class WowHead():
 				name = 'link'
 				
 			return '[{}]({})'.format(name, url)
+		
+		text = text.replace('\u2019', '’')
+		text = text.replace('\u201c', '“')
+		text = text.replace('\u201d', '”')
 
 		if type == 'bb':
 			text = text.replace('[b]', '**')
