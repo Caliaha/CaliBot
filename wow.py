@@ -72,6 +72,30 @@ class WoW():
 	def __init__(self, bot):
 		self.bot = bot
 		self.lastLookup = {}
+		self.accessToken = None
+		self.accessTokenExpiration = None
+
+	async def getAccessToken(self):
+		print(self.bot.WOWAPI_CLIENTID, self.bot.WOWAPI_CLIENTSECRET)
+		auth = aiohttp.BasicAuth(login=self.bot.WOWAPI_CLIENTID, password=self.bot.WOWAPI_CLIENTSECRET)
+		data = { 'grant_type': 'client_credentials' }
+
+		async with aiohttp.ClientSession(auth=auth) as session:
+			async with session.post('https://us.battle.net/oauth/token', data=data) as response:
+				if response.status == 200:
+					try:
+						data = json.loads(await response.text())
+						self.accessToken = data['access_token']
+						self.accessTokenExpiration = time.time() + int(data['expires_in'])
+					except Exception as e:
+						print('Failed to parse json, getAccessToken', e)
+					
+				print(self.accessToken, self.accessTokenExpiration)
+
+	async def validateAccessToken(self):
+		if self.accessToken == None or self.accessTokenExpiration == None or self.accessTokenExpiration < time.time():
+			print('Token was None or expired, getting new one')
+			await self.getAccessToken()
 
 	async def getWarcraftLogsGuildID(self, guild, realm):
 		print('getWarcraftLogsGuildID', guild, realm)
@@ -137,6 +161,11 @@ class WoW():
 		realm = characterName[2]
 		
 		return urllib.parse.quote_plus(characterName[1]), urllib.parse.quote_plus(realm.replace(" ","-"))
+
+	@commands.command()
+	async def token(self, ctx):
+		await self.getAccessToken()
+		return True
 
 	@commands.command()
 	@doThumbs()
@@ -1138,10 +1167,11 @@ class WoW():
 			return True
 
 	async def numSocketsGear(self, itemID, context, bonusList):
+		await self.validateAccessToken()
 		count = 0
 		try:
 
-			url = 'https://us.api.battle.net/wow/item/' + str(itemID) + '?bl=' + ','.join(str(bonus) for bonus in bonusList) + '&locale=en_US&apikey=' + self.bot.APIKEY_WOW
+			url = 'https://us.api.blizzard.com/wow/item/' + str(itemID) + '?bl=' + ','.join(str(bonus) for bonus in bonusList) + '&locale=en_US&access_token=' + self.accessToken
 			itemJSON = json.loads(await fetchWebpage(self, url))
 		except:
 			#print(e.reason)
@@ -1254,6 +1284,7 @@ class WoW():
 	async def gear(self, ctx, *, toon = '*'):
 		"""Shows current equipped gear and basic gem/enchant check"""
 		await ctx.trigger_typing()
+		await self.validateAccessToken()
 
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
@@ -1263,9 +1294,9 @@ class WoW():
 		gearSlots = [ 'head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2', 'mainHand', 'offHand' ] # Left out shirt, tabard
 
 		try:
-			itemsJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=items,guild&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
+			itemsJSON = await fetchWebpage(self, 'https://us.api.blizzard.com/wow/character/' + realm + '/' + character + '?fields=items,guild&locale=en_US&access_token=' + self.accessToken)
 		except:
-			await ctx.send("Unable to access character data, check for typos or invalid realm or the Battle.net API is down")
+			await ctx.send("Unable to access character data, check for typos or invalid realm or the Blizzard.com API is down")
 			return False
 		try:
 			toon = json.loads(itemsJSON)
@@ -1275,11 +1306,6 @@ class WoW():
 		#except discord.HTTPException as e:
 
 		gearData = ""
-		msg = 'Gear for **' + toon['name'] + '** of **' + toon['realm'] + '**'
-		msg += ' (<https://worldofwarcraft.com/en-us/character/' + realm + '/' + character + '>)'
-		msg += '\n**Item Level**: *' + str(toon['items']['averageItemLevelEquipped']) + '* equipped, *' + str(toon['items']['averageItemLevel']) + '* total'
- 
- 
 		missingEnchants = ''
 		missingGems = ''
 		totalSockets = 0
@@ -1345,13 +1371,11 @@ class WoW():
 				#	if int(toon['items'][gear]['itemLevel']) < 1000:
 				#		legendariesNotUpgraded += 1
 
-				msg += '\n' + str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - ' + toon['items'][gear]['name'] + ' - <' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + '> '
 				gearData += str(toon['items'][gear]['itemLevel']) + socketData + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')\n'
 
 						
 				#embed.add_field(name=gear.capitalize(), value=str(toon['items'][gear]['itemLevel']) + ' - ' + gear.capitalize() + ' - [' + toon['items'][gear]['name'] + '](' + WOWHEAD_ITEMURL + str(toon['items'][gear]['id']) + ')', inline=False)
 			else:
-				msg += '\n' + gear.capitalize() + ' is empty!'
 				gearData += gear.capitalize() + ' is empty!\n'
 
 		if (not sabersEye and totalSockets > 0):
@@ -1397,7 +1421,6 @@ class WoW():
 			await ctx.send(embed=embed)
 		except discord.HTTPException as e:
 			print(e)
-			await ctx.send(msg)
 		return True
 
 	@commands.command()
@@ -1405,13 +1428,14 @@ class WoW():
 	async def armory(self, ctx, *, toon = '*'):
 		"""Shows item level and progression info"""
 		await ctx.trigger_typing()
+		await self.validateAccessToken()
 		character, realm = self.getCharacterRealm(ctx.message.author, toon)
 		if character is None or realm is None:
 			await ctx.send('Unable to find character and realm name, please double check the command you typed\nUsage: !armory character realm')
 			return False
 		 
 		try:
-			characterJSON = await fetchWebpage(self, 'https://us.api.battle.net/wow/character/' + realm + '/' + character + '?fields=guild,progression,items,achievements&locale=en_US&apikey=' + self.bot.APIKEY_WOW)
+			characterJSON = await fetchWebpage(self, 'https://us.api.blizzard.com/wow/character/' + realm + '/' + character + '?fields=guild,progression,items,achievements&locale=en_US&access_token=' + self.accessToken)
 			if (characterJSON == "{}"):
 				await ctx.send('Empty JSON Data, this character probably doesn\'t exist or something.')
 				return False
@@ -1422,7 +1446,7 @@ class WoW():
 				await ctx.send('Unable to parse JSON data, probably Cali\'s fault')
 				return False
 		except:
-			await ctx.send('Unable to access api for ' + character + ' - ' + realm + '\nBattle.net API could also be down')
+			await ctx.send('Unable to access api for ' + character + ' - ' + realm + '\nBlizzard.com API could also be down')
 			return False
 
 		color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))
