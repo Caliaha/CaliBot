@@ -83,7 +83,7 @@ class Announce():
 			connection.close()
 		
 		return cleanUserInput(member.nick or member.name)
-
+	# TODO: Instead of leaving, look for another channel with people
 	async def inactivityCheck(self):
 		await self.bot.wait_until_ready()
 		while True:
@@ -99,6 +99,18 @@ class Announce():
 			if not member.bot and member.name is not self.bot.NAME:
 				count = count + 1
 		return count
+		
+	async def findNewVoiceChannel(self, guild):
+		print('Looking for new voice channel to join')
+		for voiceChannel in guild.voice_channels:
+			if str(voiceChannel.id) not in self.ignored_channels[guild.id] and self.countNonBotMembers(voiceChannel.members) > 0:
+				print('Attempting to join or move to {} on {}'.format(voiceChannel, guild))
+				if await self.joinOrMove(guild, voiceChannel):
+					print('Succeeded')
+					return
+				else:
+					print('Failed')
+		print('No Valid voice channels found')
 
 	async def on_voice_state_update(self, member, before, after):
 		if member.bot:
