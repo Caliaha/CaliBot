@@ -39,32 +39,35 @@ class Announce():
 			#guild = tts["guild"]
 			print(tts["guild"])
 			print(guild.id, guild.name)
-			if guild.voice_client is not None:
-				if tts["action"]:
-					await self.updateNickname(tts["guild"], tts["name"], tts["action"])
-				process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', f'-w={self.bot.TTS_FILE}-{guild.id}.wav', tts["message"]])
-				(output, err) = process.communicate()
-				exit_code = process.wait()
+			try:
+				if guild.voice_client is not None:
+					if tts["action"]:
+						await self.updateNickname(tts["guild"], tts["name"], tts["action"])
+					process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', f'-w={self.bot.TTS_FILE}-{guild.id}.wav', tts["message"]])
+					(output, err) = process.communicate()
+					exit_code = process.wait()
 
-				if (not guild.voice_client.is_connected()):
-					print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
-					self.leaveVoiceChannel(guild, guild.voice_client.channel)
+					if (not guild.voice_client.is_connected()):
+						print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
+						self.leaveVoiceChannel(guild, guild.voice_client.channel)
+					else:
+						try:
+							guild.voice_client.play(discord.FFmpegPCMAudio(f'{self.bot.TTS_FILE}-{guild.id}.wav'))
+						except Exception as e:
+							print(e, 'Error in voice.play')
+
+						print('Sleeping while playing')
+						try:
+							timer = time.time()
+							while(guild.voice_client.is_playing() and time.time() < timer + 10): #FIX ME
+								asyncio.sleep(0.1)
+						except:
+							pass
+						print('Done sleeping')
 				else:
-					try:
-						guild.voice_client.play(discord.FFmpegPCMAudio(f'{self.bot.TTS_FILE}-{guild.id}.wav'))
-					except Exception as e:
-						print(e, 'Error in voice.play')
-
-					print('Sleeping while playing')
-					try:
-						timer = time.time()
-						while(guild.voice_client.is_playing() and time.time() < timer + 10): #FIX ME
-							asyncio.sleep(0.1)
-					except:
-						pass
-					print('Done sleeping')
-			else:
-				print("I was asked to announce for something that I do not have a voice_client for")
+					print("I was asked to announce for something that I do not have a voice_client for")
+			except Exception as e:
+				print('VoiceLoop', e)
 			await self.updateNickname(tts["guild"], None)
 
 	async def fetchPhoneticName(self, member):
