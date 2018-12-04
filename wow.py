@@ -1189,13 +1189,14 @@ class WoW():
 		"""Shows warcraftlogs.com rankings for a guild"""
 		difficulties = { 'normal': '3', 'heroic': '4' }
 		categories = [ 'today', 'historical' ]
+		brackets = { 'overall': '0', 'itemlevel': '1' }
 		raids = { 'uldir': '19' }
 		sortCategories = { 'performance': 1, 'allstars': 10 }
-		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort' }
+		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort', '-b': 'bracket' }
 		arguments = { }
 		
 		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
-			await ctx.send('Usage: !rankings -g "guild name" -s "realm name" -d [normal|heroic] -r raidname -c [today|historical] -t [performance|allstars]\nAll arguments are optional.')
+			await ctx.send('Usage: !rankings -g "guild name" -s "realm name" -d [***normal***|heroic] -r raidname -c [***today***|historical] -b [overall|***itemlevel***] -t [***performance***|allstars]\nAll arguments are optional.')
 			return True
 		
 		for i in range(len(args)):
@@ -1227,6 +1228,11 @@ class WoW():
 		except:
 			raid = 'uldir'
 		try:
+			bracket = arguments['bracket']
+			bracket in brackets
+		except:
+			bracket = '1'
+		try:
 			sort = arguments['sort']
 			sort in sortCategories
 		except:
@@ -1246,8 +1252,8 @@ class WoW():
 				return False
 
 			urls = { }
-			urls['Damage Dealers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/dps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0/0'
-			urls['Healers'] = 'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/' + guildID + '/hps/' + raids[raid] + '/0/' + difficulties[difficulty] + '/10/1/Any/Any/rankings/' + category + '/1/best/0/0'
+			urls['Damage Dealers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/dps/{raids[raid]}/0/{difficulties[difficulty]}/10/1/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
+			urls['Healers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/hps/{raids[raid]}/0/{difficulties[difficulty]}/10/1/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
 
 			for title, url in urls.items():
 				webpage = await fetchWebpage(self, url)
