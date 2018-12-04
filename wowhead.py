@@ -78,11 +78,13 @@ class WowHead():
 					if descriptionMatch:
 						description = self.subMarkup(descriptionMatch[1], 'html')
 						embed.description = description
+						print('html', description)
 				else:
 					descriptionMatch = descriptionPattern.search(div.text)
 					if descriptionMatch:
 						description = self.subMarkup(descriptionMatch[1], 'bb')
 						embed.description = description
+						print('bb', description)
 
 				for guild in self.bot.guilds:
 					for channel in guild.text_channels:
@@ -96,10 +98,25 @@ class WowHead():
 
 	def subMarkup(self, text, type):
 		def urlFix(match):
-			url = match.group(1).replace('\\/', '/')
-			name = match.group(2)
-			if name == '':
-				name = url
+			urlPattern1 = re.compile('<a href="https://<a href="(.*?)".*?>(.*?)</a>/">')
+			url1Match = urlPattern1.search(match.group(1))
+			urlPattern2 = re.compile('<a href="(.*?)">(.*?)</a>')
+			url2Match = urlPattern2.search(match.group(1))
+			url = ''
+			name = ''
+			
+			if url1Match:
+				print(url1Match[1], url1Match[2])
+				url = url1Match[1]
+				name = url1Match[2]
+			elif url2Match:
+				print(url2Match[1], url2Match[2])
+				url = url2Match[1]
+				name = url2Match[2]
+			#url = match.group(1).replace('\\/', '/')
+			#name = match.group(2)
+			#if name == '':
+			#	name = url
 			if not urlparse(url).netloc:
 				url = 'https://www.wowhead.com' + url
 			#print('[{}]({})'.format(match.group(2), url))
@@ -117,9 +134,9 @@ class WowHead():
 				
 			return '[{}]({})'.format(name, url)
 		
-		text = text.replace('\u2019', '’')
-		text = text.replace('\u201c', '“')
-		text = text.replace('\u201d', '”')
+		text = text.replace('\\u2019', '’')
+		text = text.replace('\\u201c', '“')
+		text = text.replace('\\u201d', '”')
 
 		if type == 'bb':
 			text = text.replace('[b]', '**')
@@ -150,7 +167,7 @@ class WowHead():
 			text = text.replace('<i>', '***')
 			text = text.replace('</i>', '***')
 			text = re.sub('<iframe.*?</iframe>', '', text)
-			text = re.sub('<a href=\"(.*?)\".*?>(.*?)<\/a>', urlFix, text)
+			text = re.sub('(<a href.*?<\/a>(/">)?)', urlFix, text)
 			text = re.sub('\<br\/\>', '\n', text)
 			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
 			text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
