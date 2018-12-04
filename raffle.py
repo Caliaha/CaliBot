@@ -29,7 +29,6 @@ class Raffle():
 		
 		helpBox.setHeader([ 'Command', 'Description' ])
 		await sendBigMessage(self, ctx, helpBox.box())
-		#await ctx.send('```Raffle Commands\n!tickets [@member]			Lists amount of tickets member has\n!ticketlist				Lists tickets of all members in database\n!drawtest				Simulates 10,000 draws and show statistics\nThe following commands are restricted:\n!draw					Picks winner from ticket holders\n!giveticket @member [amount]		Gives one or amount of tickets to member, can be negative\n!removetickets @member			Removes all tickets from member\n!removealltickets			Removes all tickets from all members of guild```')
 
 	@commands.command()
 	@checkPermissions('raffle')
@@ -153,7 +152,7 @@ class Raffle():
 				try:
 					member = ctx.guild.get_member(int(winner))
 				except:
-					await ctx.send("Failed to get member name form discordID: {}".format(winner))
+					await ctx.send("Failed to get member name from discordID: {}".format(winner))
 
 				await ctx.send("{} has won the drawing.".format(member.mention))
 		finally:
