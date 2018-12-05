@@ -1231,7 +1231,7 @@ class WoW():
 			bracket = arguments['bracket']
 			bracket in brackets
 		except:
-			bracket = '1'
+			bracket = 'itemlevel'
 		try:
 			sort = arguments['sort']
 			sort in sortCategories
@@ -1257,7 +1257,7 @@ class WoW():
 
 			for title, url in urls.items():
 				webpage = await fetchWebpage(self, url)
-				soup = BeautifulSoup(webpage, "html.parser")
+				soup = BeautifulSoup(webpage, "lxml")
 
 				rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
 				bossRankPattern = re.compile('<td class="character-metric-overall-rank (.*?)">\n?(\d+\.\d+|\d+|\-)')
