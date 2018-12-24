@@ -137,6 +137,7 @@ class WowHead():
 		text = text.replace('\\u2019', '’')
 		text = text.replace('\\u201c', '“')
 		text = text.replace('\\u201d', '”')
+		text = text.replace('\\u00e9', 'é')
 
 		if type == 'bb':
 			text = text.replace('[b]', '**')
