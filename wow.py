@@ -251,31 +251,43 @@ class WoW():
 	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
+		validArguments = { '-g': 'guild', '-s': 'realm', '-t': 'threshold', '-f': 'fullWait' }
+		arguments = { }
+		
+		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
+			await ctx.send('Usage: !mythic -g "guild name" -s "realm name" -t [integer] -f\nAll arguments are optional.')
+			return True
+		
+		for i in range(len(args)):
+			if args[i] in validArguments:
+				if i+1 < len(args):
+					arguments[validArguments[args[i]]] = args[i+1]
+				else:
+					arguments[validArguments[args[i]]] = True
 		try:
-			guild = args[0]
+			guild = arguments['guild']
 		except:
-			guild = "The Touch of Chaos"
+			guild = False
 		try:
-			realm = args[1]
+			realm = arguments['realm']
 		except:
 			realm = "Cairne"
-		
-		fullWait = False
-		fullWaitWarning = ''
-		if guild is '*':
-			guild = None
-			fullWait = True
-			fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
-		
 		try:
-			doWait = args[0]
-			if doWait is '*':
-				fullWait = True
-				fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
+			threshold = int(arguments['threshold'])
 		except:
-			pass
+			threshold = 0
 
-		if (len(args) <= 1 and ctx.guild is not None):
+		try:
+			arguments['fullWait']
+			fullWait = True
+		except:
+			fullWait = False
+		
+		fullWaitWarning = ''
+		if fullWait:
+			fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
+
+		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
 
 		await ctx.trigger_typing()
@@ -308,13 +320,24 @@ class WoW():
 			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
 			return False
 
+		embed=discord.Embed(title='Mythic+ Data for {} on {}'.format(guild, realm.capitalize()), url='https://raider.io/guilds/us/{}/{}/roster#mode=mythic_plus'.format(urllib.parse.quote(realm), urllib.parse.quote(guild)), color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.add_field(name='Status', value='N/A', inline=True)
+		embed.add_field(name='Time Left', value='N/A', inline=True)
+		embed.add_field(name='Queue Position', value='N/A', inline=True)
+		embed.add_field(name='Crawled', value='N/A', inline=True)
+		
 		try:
 			updateableMessage
-		except:
-			updateableMessage = await ctx.send(fullWaitWarning + 'Performing lookup for <' + guild + '> on ' + realm)
+		except Exception as e:
+			print(e)
+			#updateableMessage = await ctx.send(fullWaitWarning + 'Performing lookup for <' + guild + '> on ' + realm)
+			updateableMessage = await ctx.send(embed=embed)
 
 		try:
-			await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data Status: Unknown Currently Processing: 0/0')
+			embed.set_field_at(0, name='Status', value='Unknown')
+			embed.description = fullWaitWarning
+			await updateableMessage.edit(embed=embed, content='')
+			#await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data Status: Unknown Currently Processing: 0/0')
 
 			data = { 'realmId': guildData['data']['realm']['id'], 'realm': guildData['data']['realm']['name'], 'region': guildData['data']['region']['slug'], 'guild': guildData['data']['name'], 'numMembers': 50 }
 
@@ -325,12 +348,18 @@ class WoW():
 			while checkStatus:
 				status = json.loads(await fetchWebpage(self, 'https://raider.io/api/crawler/monitor?batchId=' + postJSON['jobData']['batchId']))
 				try:
-					if int(status['batchInfo']['jobs'][0]['positionInQueue']) > 0:
-						queueStatus = 'Queue: {} out of {}\n'.format(status['batchInfo']['jobs'][0]['positionInQueue'], status['batchInfo']['jobs'][0]['totalItemsInQueue'])
-					else:
-						queueStatus = ''
-					await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\n'.format((startTime + 120 - time.time())) + queueStatus + 'Status: {} Currently Processing: {}/{}'.format(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+					print(status['batchInfo']['status'])
+					try:# It's try/excepts all the way down
+						embed.set_field_at(2, name='Queue Position', value='{}/{}'.format(status['batchInfo']['jobs'][0]['positionInQueue'], status['batchInfo']['jobs'][0]['totalItemsInQueue']), inline=True)
+					except:
+						pass
+						#await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\n'.format((startTime + 120 - time.time())) + queueStatus + 'Status: {} Currently Processing: {}/{}'.format(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+					embed.set_field_at(0, name='Status', value='{}'.format(status['batchInfo']['status']), inline=True)
+					embed.set_field_at(1, name='Time Left', value='{:.0f}'.format((startTime + 120 - time.time())), inline=True)
+					embed.set_field_at(3, name='Crawled', value='{}/{}'.format(status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']), inline=True)
+					await updateableMessage.edit(embed=embed, content='')
 				except Exception as e:
+					print(status)
 					print("Could not update !mythic updateable message", e)
 				if  startTime + 120 < time.time():
 					if not fullWait:
@@ -353,7 +382,7 @@ class WoW():
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
-			print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
+			#print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm=' + realm + '&guild=' + guild + '&season=season-bfa-1&class=all&role=all&page=0')
 			#rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
@@ -371,8 +400,9 @@ class WoW():
 		box = BoxIt()
 		box.setTitle('Mythic+ Scores for ' + guild)
 		for character in roster['rankings']['rankedCharacters']:
-			print(character['character']['name'], character['character']['spec']['name'], character['rank'], character['score'])
-			box.addRow([ character['character']['name'], character['character']['spec']['name'], float(character['score']) ])
+			#print(character['character']['name'], character['character']['spec']['name'], character['rank'], character['score'])
+			if float(character['score']) >= threshold:
+				box.addRow([ character['character']['name'], character['character']['spec']['name'], float('{0:.2f}'.format(character['score'])) ])
 		#for character in roster['guildRoster']['roster']:
 		#	#print(character['character']['name'], character['character']['items']['item_level_equipped'], character['character']['items']['item_level_total'])
 		#	if 'keystoneScores' in character and 'allScore' in character['keystoneScores']:
