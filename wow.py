@@ -275,7 +275,7 @@ class WoW():
 		try:
 			threshold = int(arguments['threshold'])
 		except:
-			threshold = 0
+			threshold = 100
 
 		try:
 			arguments['fullWait']
