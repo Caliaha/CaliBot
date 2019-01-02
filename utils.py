@@ -9,6 +9,11 @@ class utils():
 	def __init__(self, bot):
 		self.bot = bot
 
+	async def on_typing(self, channel, user, when):
+		if user.bot or user.name == self.bot.NAME:
+			return
+		await channel.trigger_typing()
+
 	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
