@@ -1221,8 +1221,9 @@ class WoW():
 		categories = [ 'today', 'historical' ]
 		brackets = { 'overall': '0', 'itemlevel': '1' }
 		raids = { 'uldir': '19' }
+		patches = { '8.0': 1, '8.1': 2 }
 		sortCategories = { 'performance': 1, 'allstars': 10 }
-		validArguments = { '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort', '-b': 'bracket' }
+		validArguments = { '-p': 'patch', '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort', '-b': 'bracket' }
 		arguments = { }
 		
 		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
@@ -1267,6 +1268,11 @@ class WoW():
 			sort in sortCategories
 		except:
 			sort = 'performance'
+		try:
+			patch = arguments['patch']
+			patch in patches
+		except:
+			patch = '8.1'
 
 		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
@@ -1282,8 +1288,8 @@ class WoW():
 				return False
 
 			urls = { }
-			urls['Damage Dealers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/dps/{raids[raid]}/0/{difficulties[difficulty]}/10/1/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
-			urls['Healers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/hps/{raids[raid]}/0/{difficulties[difficulty]}/10/1/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
+			urls['Damage Dealers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/dps/{raids[raid]}/0/{difficulties[difficulty]}/10/{patches[patch]}/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
+			urls['Healers'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/hps/{raids[raid]}/0/{difficulties[difficulty]}/10/{patches[patch]}/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
 
 			for title, url in urls.items():
 				webpage = await fetchWebpage(self, url)
