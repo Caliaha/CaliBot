@@ -78,13 +78,13 @@ class WowHead():
 					if descriptionMatch:
 						description = self.subMarkup(descriptionMatch[1], 'html')
 						embed.description = description
-						print('html', description)
+						#print('html', description)
 				else:
 					descriptionMatch = descriptionPattern.search(div.text)
 					if descriptionMatch:
 						description = self.subMarkup(descriptionMatch[1], 'bb')
 						embed.description = description
-						print('bb', description)
+						#print('bb', description)
 
 				for guild in self.bot.guilds:
 					for channel in guild.text_channels:
@@ -94,7 +94,7 @@ class WowHead():
 								await channel.send(embed=embed)
 								await self.storePostedData(guild.id, postID)
 							break
-			await asyncio.sleep(120)
+			await asyncio.sleep(600)
 
 	def subMarkup(self, text, type):
 		def urlFix(match):
@@ -106,11 +106,11 @@ class WowHead():
 			name = ''
 			
 			if url1Match:
-				print(url1Match[1], url1Match[2])
+				#print(url1Match[1], url1Match[2])
 				url = url1Match[1]
 				name = url1Match[2]
 			elif url2Match:
-				print(url2Match[1], url2Match[2])
+				#print(url2Match[1], url2Match[2])
 				url = url2Match[1]
 				name = url2Match[2]
 			#url = match.group(1).replace('\\/', '/')
