@@ -10,9 +10,8 @@ class Announce():
 	def __init__(self, bot):
 		self.bot = bot
 		self.file = '-w=' + self.bot.TTS_FILE
-		self.paused = False
 		self.ignored_channels = {}
-		self.allowedGuilds = [ 332340487451312141, 254746234466729987 ]
+		self.allowedGuilds = [ ]
 		self.bot.loop.create_task(self.inactivityCheck())
 		self.guildQueue = {}
 		self.queue = {}
@@ -36,7 +35,6 @@ class Announce():
 			print('ProcessQueueLoopStart', guild.name)
 			tts = await self.queue[guild.id].get()
 
-			#guild = tts["guild"]
 			print(tts["guild"])
 			print(guild.id, guild.name)
 			try:
@@ -49,7 +47,7 @@ class Announce():
 
 					if (not guild.voice_client.is_connected()):
 						print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
-						self.leaveVoiceChannel(guild, guild.voice_client.channel)
+						await self.leaveVoiceChannel(guild, guild.voice_client.channel)
 					else:
 						try:
 							guild.voice_client.play(discord.FFmpegPCMAudio(f'{self.bot.TTS_FILE}-{guild.id}.wav'))
@@ -110,10 +108,11 @@ class Announce():
 				print('Attempting to join or move to {} on {}'.format(voiceChannel, guild))
 				if await self.joinOrMove(guild, voiceChannel):
 					print('Succeeded')
-					return
+					return True
 				else:
 					print('Failed')
 		print('No Valid voice channels found')
+		return False
 
 	async def on_voice_state_update(self, member, before, after):
 		if member.bot:
@@ -129,6 +128,8 @@ class Announce():
 			return False
 
 		print("VOICE_STATE_UPDATE", member.name, member.guild.name, before.channel, after.channel)
+		#if (before.channel == after.channel) then # Probably just a status update
+		#	return
 		guild = member.guild
 		if guild.id not in self.allowedGuilds:
 		 print("Guild {} not in list of allowed guilds".format(guild.name))
@@ -149,7 +150,10 @@ class Announce():
 							self.ignored_channels[guild.id] = result['mdg_ignore'].split()
 			finally:
 				connection.close()
-
+		try:
+			print(member.guild.voice_client.is_connected())
+		except:
+			pass
 		if member.guild.voice_client and member.guild.voice_client.is_connected():		#guild.id in self.guildQueue
 			if self.countNonBotMembers(member.guild.voice_client.channel.members) == 0:
 				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
@@ -158,13 +162,10 @@ class Announce():
 					return
 				else:
 					print('No members left in channel, finding another one')
-					for voiceChannel in guild.voice_channels:
-						if str(voiceChannel.id) not in self.ignored_channels[guild.id] and self.countNonBotMembers(voiceChannel.members) > 0:
-							if await self.joinOrMove(guild, voiceChannel):
-								return
-					print('Left voice channel on {} because no one left in valid channels'.format(guild.name))
-					await self.leaveVoiceChannel(guild, member.guild.voice_client.channel)
-					await self.updateNickname(guild, None)
+					if not await self.findNewVoiceChannel(guild):
+						print('Left voice channel on {} because no one left in valid channels'.format(guild.name))
+						await self.leaveVoiceChannel(guild, member.guild.voice_client.channel)
+						await self.updateNickname(guild, None)
 					return
 		else:
 			if member.guild.voice_client and not member.guild.voice_client.is_connected():
@@ -189,11 +190,19 @@ class Announce():
 		tts = { }
 		tts["guild"] = guild
 		tts["name"] = member.nick or member.name
+		try:
+			guild.voice_client.channel
+		except:
+			print('on_voice_state_update but no voice channel')
+			return
 		if voiceBefore is not guild.voice_client.channel and voiceAfter is guild.voice_client.channel:
 			print(member.name, 'has joined the channel')
 			tts["action"] = 'Join'
 			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has joined."
-			await self.queue[member.guild.id].put(tts)
+			try:
+				await self.queue[member.guild.id].put(tts)
+			except Exception as e:
+				print("Couldn't add to queue", guild.id, e)
 			return
 		if voiceBefore is guild.voice_client.channel and voiceAfter is not guild.voice_client.channel:
 			if voiceAfter is not None and voiceAfter.name == "afk":
@@ -203,7 +212,10 @@ class Announce():
 				tts["action"] = 'Leave'
 				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has left."
 			print(member.name, 'has left the channel')
-			await self.queue[member.guild.id].put(tts)
+			try:
+				await self.queue[member.guild.id].put(tts)
+			except Exception as e:
+				print("Couldn't add to queue", guild.id, e)
 			return
 		return
 
@@ -252,19 +264,19 @@ class Announce():
 				await self.leaveVoiceChannel(guild, channel)
 				return True
 			print("Attempting to change voice channels to {}".format(channel))
-			if await guild.voice_client.move_to(channel):
-				await self.updateDB(guild.id, channel.id)
-				print("Succeeded")
-				return True
-			else:
-				print("Failed")
-			return False
+			await guild.voice_client.move_to(channel)
+			await self.updateDB(guild.id, channel.id)
+
+			return True
  
 		if channel is not None:
-			self.guildQueue[guild.id] = self.bot.loop.create_task(self.processQueue(guild))
-			self.queue[guild.id] = asyncio.Queue()
-			if await channel.connect():
-				print('Connectiong to voice channel {} on guild {}'.format(channel, guild))
+			print('Connecting to voice channel {} on guild {}'.format(channel, guild))
+			await channel.connect()
+
+			if guild.voice_client:
+				self.guildQueue[guild.id] = self.bot.loop.create_task(self.processQueue(guild))
+				self.queue[guild.id] = asyncio.Queue()
+
 				await self.updateDB(guild.id, channel.id)
 
 				tts = { }
@@ -273,14 +285,20 @@ class Announce():
 				tts["name"] = "CaliBot"
 				tts["message"] = "<volume level='50'>Beep"
 				await self.queue[guild.id].put(tts)
-				return True
-			return False
+			return
 
 	async def on_ready(self):
 		print("Attempting to reconnect to all voice channels")
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
+				sql = "SELECT `announce`, `guildID` FROM `guild_defaults`"
+				cursor.execute(sql)
+				results = cursor.fetchall()
+				for result in results:
+					if result['announce'] == True:
+						print('Announcing for {}'.format(self.bot.get_guild(int(result['guildID']))))
+						self.allowedGuilds.append(int(result['guildID']))
 				sql = "SELECT `guildID`, `channel` FROM `voice_status`"
 				cursor.execute(sql)
 				results = cursor.fetchall()
@@ -300,6 +318,42 @@ class Announce():
 		for guild in self.bot.guilds:
 			print("Resetting nickname for", guild.name)
 			await self.updateNickname(guild, None)
+
+	@commands.command()
+	@commands.guild_only()
+	@checkPermissions('voice')
+	async def toggleannounce(self, ctx):
+		try:
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "SELECT `announce` FROM `guild_defaults` WHERE `guildID` = %s LIMIT 1"
+				cursor.execute(sql,(str(ctx.guild.id)))
+				results = cursor.fetchall()
+				for result in results:
+					sql = "UPDATE `guild_defaults` SET `announce` = %s WHERE `guildID` = %s LIMIT 1"
+					if result['announce'] == True:
+						cursor.execute(sql, (False, str(ctx.guild.id)))
+						self.allowedGuilds.remove(ctx.guild.id)
+						await ctx.send('I will no longer annouce for this guild.')
+						await self.leaveVoiceChannel(ctx.guild, ctx.guild.voice_client.channel)
+					if result['announce'] == False:
+						cursor.execute(sql, (True, str(ctx.guild.id)))
+						self.allowedGuilds.append(ctx.guild.id)
+						await ctx.send('I will announce for this guild.')
+					connection.commit()
+					return True
+				sql = "INSERT INTO `guild_defaults` (`guildID`, `announce`) VALUES(%s, %s)"
+				self.allowedGuilds.append(ctx.guild.id)
+				cursor.execute(sql, (ctx.guild.id, True))
+				connection.commit()
+				await ctx.send('I will announce for this guild.')
+				return True
+		except Exception as e:
+			return False
+			print("toggleannounce unable to connect to db or something", e)
+		finally:
+			connection.close()
+		
 
 	@commands.command()
 	@commands.guild_only()
@@ -325,12 +379,10 @@ class Announce():
 		message.setTitle('Active Voice Clients')
 		for key in self.bot.voice_clients:
 			message.addRow( [ key.guild, key.guild.id, key.channel, key.channel.id, key.is_connected() ] )
-			#print(key, key.server, key.server.id, key.channel, key.channel.id, key.is_connected())
 
 		message.setHeader( [ 'Guild', 'Guild ID', 'Channel', 'Channel ID', 'Conn' ] )
-		
+
 		await ctx.send('```' + message.box() + '```')
-		await ctx.send('self.paused is set to: ' + str(self.paused))
 
 	@commands.command()
 	@commands.guild_only()
@@ -376,7 +428,7 @@ class Announce():
 					except discord.Forbidden as e:
 						print("Missing permissions to move {} to {}".format(member.name, destinationChannel.name), e)
 					except discord.HTTPException as e:
-						print("HTTPEXception Moving {} to {}".format(member.name, destinationChannel.name, e))
+						print("HTTPException Moving {} to {}".format(member.name, destinationChannel.name, e))
 					except Exception as e:
 						print("Failed moving {} to {}".format(member.name, destinationChannel.name), e)
 					else:
@@ -450,7 +502,6 @@ class Announce():
 				cursor.execute(sql, (ctx.guild.id))
 				result = cursor.fetchone()
 				if result is not None:
-					print('Beep')
 					if result['mdg_ignore'] is not None:
 						mdg_ignore = result['mdg_ignore'].split()
 					else:
@@ -458,7 +509,6 @@ class Announce():
 					if id in mdg_ignore:
 						mdg_ignore.remove(id)
 					else:
-						#pass
 						await ctx.send(channel.name + ' was not in the !mdg ignore list.')
 						return False
 					mdg_ignore = ' '.join(mdg_ignore)
