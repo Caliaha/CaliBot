@@ -135,6 +135,32 @@ def doThumbs():
 		return wrapper
 	return decorator
 
+def deleteMessage():
+	def decorator(func):
+		@wraps(func)
+		async def wrapper(*args, **kwargs):
+			self = args[0]
+			ctx = args[1]
+			if (await func(*args, **kwargs)):
+				try:
+					connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+					with connection.cursor() as cursor:
+						sql = "SELECT `deleteMessage` FROM `guild_defaults` WHERE `guildID`=%s"
+						cursor.execute(sql, (ctx.guild.id))
+						result = cursor.fetchone()
+						if result is not None:
+							if (int(result['deleteMessage']) == 1):
+								try:
+									await ctx.message.delete()
+								except Exception as e:
+									print(e)
+				except:
+					pass
+				finally:
+					connection.close()
+		return wrapper
+	return decorator
+
 def getSnowflake(string):
 	if string.isdigit():
 		return string

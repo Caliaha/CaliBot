@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands
 import pymysql.cursors
-from stuff import BoxIt, checkPermissions, cleanUserInput, doThumbs, isBotOwner, superuser
+from stuff import BoxIt, checkPermissions, cleanUserInput, deleteMessage, doThumbs, isBotOwner, superuser
 from subprocess import Popen, PIPE
 import time
 
@@ -322,6 +322,7 @@ class Announce():
 	@commands.command()
 	@commands.guild_only()
 	@checkPermissions('voice')
+	@deleteMessage()
 	async def toggleannounce(self, ctx):
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
@@ -357,6 +358,7 @@ class Announce():
 
 	@commands.command()
 	@commands.guild_only()
+	@deleteMessage()
 	async def announce(self, ctx):
 		"""Bot announces who joins or leaves your voice channel"""
 		await self.joinOrMove(ctx.guild, ctx.author.voice.channel)
@@ -364,6 +366,7 @@ class Announce():
 	@commands.command(hidden=True)
 	@commands.guild_only()
 	@checkPermissions('voice')
+	@deleteMessage()
 	async def say(self, ctx, message):
 		tts = { }
 		tts["guild"] = ctx.guild
@@ -387,6 +390,7 @@ class Announce():
 	@commands.command()
 	@commands.guild_only()
 	@checkPermissions('voice')
+	@deleteMessage()
 	@doThumbs()
 	async def mdg(self, ctx):
 		"""Moves everyone to your voice channel"""

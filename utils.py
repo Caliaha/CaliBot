@@ -1,6 +1,7 @@
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-from stuff import checkPermissions, doThumbs, isBotOwner, superuser
+import pymysql.cursors
+from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser
 import sys
 import time
 import uptime
@@ -37,7 +38,7 @@ class utils():
 	@commands.command()
 	@checkPermissions('utils')
 	async def restart(self, ctx):
-		"""Restarts CaliBot, guild owner only"""
+		"""Restarts CaliBot"""
 		await ctx.message.channel.send('I am restarting. It will take me a moment to reconnect')
 		print('Restarting script')
 		await self.bot.close()
@@ -125,6 +126,35 @@ class utils():
 	@commands.guild_only()
 	async def purge(self, ctx, amount: int = 10):
 		await ctx.channel.delete_messages(await ctx.channel.history(limit=amount).flatten())
+
+	@commands.command()
+	@deleteMessage()
+	@commands.guild_only()
+	async def dm(self, ctx):
+		"""Bot will delete successful command messages"""
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		try:
+			with connection.cursor() as cursor:
+				sql = "SELECT `deleteMessage` FROM `guild_defaults` WHERE `guildID`=%s"
+				cursor.execute(sql, (ctx.guild.id))
+				result = cursor.fetchone()
+				if result is None:
+					sql = "INSERT INTO `guild_defaults` (`guildID`, `deleteMessage`) VALUES(%s, %s)" # FIX ME, Create this when guild is joined instead of everytime we attempt an access
+					cursor.execute(sql, (ctx.guild.id, True))
+					connection.commit()
+				else:
+					dm = result['deleteMessage']
+					if dm:
+						await ctx.send('I will no longer delete invoking commands')
+						dm = False
+					else:
+						dm = True
+						await ctx.send('I will delete invoking commands that are successful, probably.')
+					sql = "UPDATE `guild_defaults` SET `deleteMessage` = %s WHERE `guildID` = %s LIMIT 1"
+					cursor.execute(sql, (dm, ctx.guild.id))
+					connection.commit()
+		finally:
+			connection.close()
 
 def setup(bot):
 	bot.add_cog(utils(bot))

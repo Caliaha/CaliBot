@@ -6,7 +6,7 @@ from discord.ext import commands
 import json
 import pymysql.cursors
 import re
-from stuff import BoxIt, doThumbs, superuser, fetchWebpage, postWebdata
+from stuff import BoxIt, deleteMessage, doThumbs, superuser, fetchWebpage, postWebdata
 import time
 import urllib.parse
 import urllib.request
@@ -168,6 +168,7 @@ class WoW():
 		return True
 
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def affixes(self, ctx):
 		"""Show weekly mythic+ affixes"""
@@ -248,6 +249,7 @@ class WoW():
 			connection.close()
 
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
@@ -442,6 +444,7 @@ class WoW():
 		return True
 
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def wp(self, ctx, *, toon = '*'):
 		"""Mythic+ completion rates as shown on wowprogress.com"""
@@ -1214,6 +1217,7 @@ class WoW():
 		return count
 
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def rankings(self, ctx, *args):
 		"""Shows warcraftlogs.com rankings for a guild"""
@@ -1322,6 +1326,7 @@ class WoW():
 		return True
 	
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def gear(self, ctx, *, toon = '*'):
 		"""Shows current equipped gear and basic gem/enchant check"""
@@ -1466,6 +1471,7 @@ class WoW():
 		return True
 
 	@commands.command()
+	@deleteMessage()
 	@doThumbs()
 	async def armory(self, ctx, *, toon = '*'):
 		"""Shows item level and progression info"""
