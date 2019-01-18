@@ -39,8 +39,8 @@ class Announce():
 			print(guild.id, guild.name)
 			try:
 				if guild.voice_client is not None:
-					if tts["action"]:
-						await self.updateNickname(tts["guild"], tts["name"], tts["action"])
+					#if tts["action"]:
+						#await self.updateNickname(tts["guild"], tts["name"], tts["action"])
 					process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', f'-w={self.bot.TTS_FILE}-{guild.id}.wav', tts["message"]])
 					(output, err) = process.communicate()
 					exit_code = process.wait()
@@ -58,7 +58,7 @@ class Announce():
 						try:
 							timer = time.time()
 							while(guild.voice_client.is_playing() and time.time() < timer + 10): #FIX ME
-								asyncio.sleep(0.1)
+								await asyncio.sleep(0.1)
 						except:
 							pass
 						print('Done sleeping')
@@ -66,7 +66,7 @@ class Announce():
 					print("I was asked to announce for something that I do not have a voice_client for")
 			except Exception as e:
 				print('VoiceLoop', e)
-			await self.updateNickname(tts["guild"], None)
+			#await self.updateNickname(tts["guild"], None)
 
 	async def fetchPhoneticName(self, member):
 		try:
@@ -165,7 +165,7 @@ class Announce():
 					if not await self.findNewVoiceChannel(guild):
 						print('Left voice channel on {} because no one left in valid channels'.format(guild.name))
 						await self.leaveVoiceChannel(guild, member.guild.voice_client.channel)
-						await self.updateNickname(guild, None)
+						#await self.updateNickname(guild, None)
 					return
 		else:
 			if member.guild.voice_client and not member.guild.voice_client.is_connected():
@@ -198,7 +198,7 @@ class Announce():
 		if voiceBefore is not guild.voice_client.channel and voiceAfter is guild.voice_client.channel:
 			print(member.name, 'has joined the channel')
 			tts["action"] = 'Join'
-			tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has joined."
+			tts["message"] = "<volume level='50'><speed level='75'>{} has joined.</speed></volume>".format(await self.fetchPhoneticName(member))
 			try:
 				await self.queue[member.guild.id].put(tts)
 			except Exception as e:
@@ -207,10 +207,10 @@ class Announce():
 		if voiceBefore is guild.voice_client.channel and voiceAfter is not guild.voice_client.channel:
 			if voiceAfter is not None and voiceAfter.name == "afk":
 				tts["action"] = 'AFK'
-				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has gone a f k."
+				tts["message"] = "<volume level='50'><speed level='75'>{} has gone a f k.</speed></volume>".format(await self.fetchPhoneticName(member))
 			else:
 				tts["action"] = 'Leave'
-				tts["message"] = "<volume level='50'>" + await self.fetchPhoneticName(member) + " has left."
+				tts["message"] = "<volume level='50'><speed level='75'>{} has left.</speed></volume>".format(await self.fetchPhoneticName(member))
 			print(member.name, 'has left the channel')
 			try:
 				await self.queue[member.guild.id].put(tts)
