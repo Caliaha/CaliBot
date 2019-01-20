@@ -679,26 +679,21 @@ class WoW():
 	@doThumbs()
 	async def wowtoken(self, ctx):
 		"""Show current wow token price"""
-		await ctx.trigger_typing()
-		tokenpattern = re.compile('\{"NA":\{"timestamp":(.*?)."raw":\{"buy":(.*?)."24min":(.*?),"24max":(.*?)."timeToSell":')
+		await ctx.trigger_typing()	
+		await self.validateAccessToken()
 		try:
-			tokenjson = urllib.request.urlopen('https://data.wowtoken.info/snapshot.json').read().decode('utf-8')
+			tokenJSON = json.loads(await fetchWebpage(self, f'https://us.api.blizzard.com/data/wow/token/index?namespace=dynamic-us&locale=en_US&access_token={self.accessToken}'))
+		except Exception as e:
+			print("Errow getting wowtoken", e)
+			return False
+		price = int(tokenJSON['price'] / 10000)
+		embed=discord.Embed(title='WoW Token', description='The WoWToken is currently at {:,} gold.'.format(price), url='https://wowtoken.info', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.set_thumbnail(url='https://i.imgur.com/Mm5Ywjn.png')
+		try:
+			await ctx.send(embed=embed)
 		except:
-			await ctx.send('Couldn\'t access wowtoken.info')
-			return False
-		tokenmatch = tokenpattern.match(tokenjson)
-		if tokenmatch is not None:
-			embed=discord.Embed(title='WoW Token', description='The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))), url='https://wowtoken.info', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
-			embed.set_thumbnail(url='https://i.imgur.com/Mm5Ywjn.png')
-			print('!wowtoken -> {:,}'.format(int(tokenmatch.group(2))))
-			try:
-				await ctx.send(embed=embed)
-			except:
-				await ctx.send('The WoWToken is currently at {:,} gold.'.format(int(tokenmatch.group(2))))
-			return True
-		else:
-			await ctx.send('Failed to parse out wowtoken pricing information')
-			return False
+			await ctx.send('The WoWToken is currently at {:,} gold.'.format(price))
+		return True
 
 	@commands.command()
 	@superuser()
