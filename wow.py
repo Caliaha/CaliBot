@@ -1219,7 +1219,7 @@ class WoW():
 		difficulties = { 'normal': '3', 'heroic': '4' }
 		categories = [ 'today', 'historical' ]
 		brackets = { 'overall': '0', 'itemlevel': '1' }
-		raids = { 'uldir': '19' }
+		raids = { 'uldir': '19', 'dazz': '21' }
 		patches = { '8.0': 1, '8.1': 2 }
 		sortCategories = { 'performance': 1, 'allstars': 10 }
 		validArguments = { '-p': 'patch', '-g': 'guild', '-s': 'realm', '-d': 'difficulty', '-r': 'raid', '-c': 'category', '-t': 'sort', '-b': 'bracket' }
@@ -1256,7 +1256,7 @@ class WoW():
 			raid = arguments['raid']
 			raid in raids
 		except:
-			raid = 'uldir'
+			raid = 'dazz'
 		try:
 			bracket = arguments['bracket']
 			bracket in brackets
@@ -1271,7 +1271,7 @@ class WoW():
 			patch = arguments['patch']
 			patch in patches
 		except:
-			patch = '8.1'
+			patch = '8.0'
 
 		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
@@ -1316,7 +1316,8 @@ class WoW():
 								characterData.append(int(bossRanks[1]))
 						box.addRow(characterData)
 				box.sort(sortCategories[sort], True)
-				box.setHeader( ['Name', 'Avg', 'Taloc', 'Mom', 'Devourer', 'Zek', 'Vect', 'Zul', 'Myth', 'G\'huun', '*'] )
+				#box.setHeader( ['Name', 'Avg', 'Taloc', 'Mom', 'Devourer', 'Zek', 'Vect', 'Zul', 'Myth', 'G\'huun', '*'] )
+				box.setHeader( ['Name', 'Avg', 'CoL', 'Jade', 'Grg', 'Opul', 'CoC', 'Rasta', 'Gnome', 'Block', 'Jaina', '*'] )
 				await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 		return True
 	
@@ -1508,8 +1509,8 @@ class WoW():
 
 		#RAIDS = [ 'Antorus, the Burning Throne', 'Tomb of Sargeras', 'The Nighthold', 'Trial of Valor', 'The Emerald Nightmare' ]
 		#RAID_AOTC = { 'Antorus, the Burning Throne': 12110, 'Tomb of Sargeras': 11874, 'The Nighthold': 11195, 'Trial of Valor': 11581, 'The Emerald Nightmare': 11194 }
-		RAIDS = [ 'Uldir' ]
-		RAID_AOTC = { 'Uldir' : 12536 }
+		RAIDS = [ 'Battle of Dazar\'alor', 'Uldir' ]
+		RAID_AOTC = { 'Uldir' : 12536, 'Battle of Dazar\'alor': 13322 }
 		RAID_PROG = { }
 		for raid in RAIDS:
 			RAID_PROG[raid] = { }
@@ -1560,9 +1561,9 @@ class WoW():
 			embed.add_field(name='Progression', value=progressionMessage)
 
 		hasAOTC = True
-		if 12535 in toon['achievements']['achievementsCompleted']:
+		if 13323 in toon['achievements']['achievementsCompleted']:
 			embed.description = 'Has *Cutting Edge* for the current tier'
-		elif 12536 in toon['achievements']['achievementsCompleted']:
+		elif 13322 in toon['achievements']['achievementsCompleted']:
 			embed.description = 'Has *AOTC* for the current tier'
 		else:
 			hasAOTC = False
