@@ -197,6 +197,7 @@ class WoW():
 		mythicAffixes['Quaking'] = 'Periodically, all players emit a shockwave, inflicting damage and interrupting nearby allies.'
 		mythicAffixes['Relentless'] = 'Non-boss enemies are granted temporary immunity to Loss of Control effects.'
 		mythicAffixes['Infested'] = 'Some non-boss enemies have been infested with a Spawn of G\'huun.'
+		mythicAffixes['Reaping'] = 'Non-boss enemies are empowered by Bwonsamdi and periodically seek vengeance from beyond the grave.'
  
 		embed=discord.Embed(title='Mythic+ Affixes', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 
