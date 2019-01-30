@@ -354,7 +354,23 @@ class Announce():
 			print("toggleannounce unable to connect to db or something", e)
 		finally:
 			connection.close()
-		
+
+	@commands.command()
+	@commands.guild_only()
+	@checkPermissions('voice')
+	@deleteMessage()
+	@doThumbs()
+	async def shutup(self, ctx):
+		"""Purges voice queue"""
+		try:
+			self.guildQueue[ctx.guild.id].cancel()
+			self.queue[ctx.guild.id] = None
+			self.guildQueue[ctx.guild.id] = self.bot.loop.create_task(self.processQueue(ctx.guild))
+			self.queue[ctx.guild.id] = asyncio.Queue()
+			return True
+		except Exception as e:
+			print("Shutup failed:", e)
+			return False
 
 	@commands.command()
 	@commands.guild_only()
