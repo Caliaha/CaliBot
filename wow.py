@@ -278,7 +278,7 @@ class WoW():
 		try:
 			threshold = int(arguments['threshold'])
 		except:
-			threshold = 100
+			threshold = 50
 
 		try:
 			arguments['fullWait']
@@ -386,7 +386,7 @@ class WoW():
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			#print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
-			rawJSON = await fetchWebpage(self, 'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm=' + realm + '&guild=' + guild + '&season=season-bfa-1&class=all&role=all&page=0')
+			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-2&class=all&role=all&page=0')
 			#rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
@@ -1295,7 +1295,6 @@ class WoW():
 			urls['hps'] = f'https://www.warcraftlogs.com/rankings/guild-rankings-for-zone/{guildID}/hps/{raids[raid]}/0/{difficulties[difficulty]}/10/{patches[patch]}/Any/Any/rankings/{category}/{brackets[bracket]}/best/0/0'
 			characterIDPattern = re.compile('<td class="character-metric-name"><a class=".*?" href="/character/id/(\d+)#.*?">(.*?)</a>')
 			for category, url in urls.items():
-				print(url)
 				webpage = await fetchWebpage(self, url)
 				soup = BeautifulSoup(webpage, "lxml")
 				rankingPattern = re.compile('<td class="character-metric-name"><a class="(.*?)" href=".*?">(.*?)</a>')
