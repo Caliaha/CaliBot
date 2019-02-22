@@ -26,7 +26,7 @@ LEGION_GEMS_SABER = [ 130246, 130247, 130248 ]
 LEGION_GEMS_MIDTIER = [ 130219, 130220, 130221, 130222 ]
 LEGION_GEMS_CHEAP = [ 130215, 130216, 130217, 130218, ]
 BFA_ENCHANTSLOTS = [ 'mainHand', 'finger1', 'finger2' ]
-BFA_ENCHANTS = [ 5942, 5943, 5944, 5945, 5946, 5948, 5949, 5950, 5962, 5963, 5964, 5965, 5966, 5957 ]
+BFA_ENCHANTS = [ 3368, 3370, 3847, 5942, 5943, 5944, 5945, 5946, 5948, 5949, 5950, 5962, 5963, 5964, 5965, 5966, 5957 ]
 BFA_ENCHANTS_CHEAP = [ 5938, 5939, 5940, 5941 ]
 BFA_GEMS = [ 154126, 154127, 154128, 154129 ]
 BFA_GEMS_SABER = [ 153707, 153708, 153709 ]
@@ -1464,6 +1464,113 @@ class WoW():
 				box.setHeader( ['Name', 'Avg', 'CoL', 'Jade', 'Grg', 'Opul', 'CoC', 'Rasta', 'Gnome', 'Block', 'Jaina', '*'] )
 				await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 		return True
+
+	@commands.command()
+	@deleteMessage()
+	@doThumbs()
+	async def enchantcheck(self, ctx, *, ranksToCheck):
+		"""Show missing enchants for guild rank"""
+		async with ctx.channel.typing():
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
+			if not (guild, realm):
+				return False
+
+			ranks = ranksToCheck.split()
+			
+			await self.validateAccessToken()
+			try:
+				guildJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/guild/{realm}/{guild}?fields=members&locale=en_US&access_token={self.accessToken}')
+				guildData = json.loads(guildJSON)
+			except Exception as e:
+				await ctx.send('Failed to fetch webpage or parse json', e)
+				return False
+			message = f'***Enchant/Gem Data for {guild}***'
+			for member in guildData['members']:
+				if str(member['rank']) in ranks:
+					gearSlots = [ 'head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2', 'mainHand', 'offHand' ] # Left out shirt, tabard
+
+					try:
+						itemsJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/character/{member["character"]["realm"]}/{member["character"]["name"]}?fields=items,guild&locale=en_US&access_token={self.accessToken}')
+					except:
+						await ctx.send("Unable to access character data, check for typos or invalid realm or the Blizzard.com API is down")
+						return False
+					try:
+						toon = json.loads(itemsJSON)
+					except:
+						print('Skipping:', member['character']['name'])
+						continue
+					#except discord.HTTPException as e:
+
+					gearData = ""
+					missingEnchants = []
+					missingGems = []
+					totalSockets = 0
+					sabersEye = False
+					gemsCheapEquipped = 0
+					gemsMidTierEquipped = 0
+					for gear in gearSlots:
+						socketData = ''
+						if gear in toon['items']:
+							sockets = await self.numSocketsGear(toon['items'][gear]['id'], toon['items'][gear]['context'], toon['items'][gear]['bonusLists'])
+							totalSockets += sockets
+							if (sockets > 0):
+								gemCount = 0
+								for i in range(0, sockets):
+									#print("Loop", i, sockets)
+									try:
+										if toon['items'][gear]['tooltipParams']['gem' + str(i)]:
+											quality = toon['items'][gear]['tooltipParams']['gem' + str(i)]
+											#print("Gem Quality", quality, gear)
+											if quality in BFA_GEMS:
+												pass
+											elif quality in BFA_GEMS_SABER:
+												sabersEye = True
+											elif quality in BFA_GEMS_CHEAP:
+												gemsCheapEquipped += 1
+										else:
+											gemCount += 1
+									except:
+										gemCount += 1
+								if (gemCount > 0):
+										missingGems.append(gear.capitalize() + ' is missing ' + str(gemCount) + '/' + str(sockets) + ' gems')
+								if (sockets > 0):
+									socketData = ' (' + str(sockets - gemCount) + '/' + str(sockets) + ')'
+								
+							enchant = ''
+							if gear in BFA_ENCHANTSLOTS:
+								try:
+									if toon['items'][gear]['tooltipParams']['enchant'] in BFA_ENCHANTS:
+										pass
+									elif toon['items'][gear]['tooltipParams']['enchant'] in BFA_ENCHANTS_CHEAP:
+										enchant = 'Cheap'
+									else:
+										enchant = 'No'
+								except:
+									enchant = 'No'
+								if enchant == 'No' or enchant == 'Cheap':
+									missingEnchants.append(enchant + ' ' + gear.capitalize() + ' enchant')
+						else:
+							gearData += gear.capitalize() + ' is empty!\n'
+
+					if (not sabersEye and totalSockets > 0):
+						missingGems.append('No Kraken\'s Eye Equipped!')
+					if (gemsMidTierEquipped > 0):
+						missingGems.append(str(gemsMidTierEquipped) + ' "okay" gems equipped!')
+					if (gemsCheapEquipped > 0):
+						missingGems.append(str(gemsCheapEquipped) + ' "pathetic" gems equipped!')
+					
+					if len(missingGems) > 0 or len(missingEnchants) > 0:
+						message = f'{message}\n**{member["character"]["name"]}**'
+						if (len(missingEnchants)) > 0:
+							message = f'{message}\n\t{", ".join(missingEnchants)}'
+						if (len(missingGems)) > 0:
+							message = f'{message}\n\t{", ".join(missingGems)}'
+
+			await self.sendBulkyMessage(ctx, message)
+			try:
+				await updateableMessage.delete()
+			except:
+				pass
 	
 	@commands.command()
 	@deleteMessage()
