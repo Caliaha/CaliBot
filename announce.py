@@ -264,6 +264,9 @@ class Announce():
 				await self.leaveVoiceChannel(guild, channel)
 				return True
 			print("Attempting to change voice channels to {}".format(channel))
+			if not channel.permissions_for(guild.me).connect:
+				print(f'I do not have permission to join {channel}')
+				return False
 			await guild.voice_client.move_to(channel)
 			await self.updateDB(guild.id, channel.id)
 
@@ -271,7 +274,9 @@ class Announce():
  
 		if channel is not None:
 			print('Connecting to voice channel {} on guild {}'.format(channel, guild))
-			#if channel.permissions_for(member).connect
+			if not channel.permissions_for(guild.me).connect:
+				print(f'I do not have permission to join {channel}')
+				return False
 			await channel.connect()
 
 			if guild.voice_client:
