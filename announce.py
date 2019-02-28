@@ -271,6 +271,7 @@ class Announce():
  
 		if channel is not None:
 			print('Connecting to voice channel {} on guild {}'.format(channel, guild))
+			#if channel.permissions_for(member).connect
 			await channel.connect()
 
 			if guild.voice_client:
@@ -434,9 +435,12 @@ class Announce():
 				listToMove = []
 				count = 0
 				for member in channel.members:
-					print(member.name + " Added to listToMove")
-					count = count + 1
-					listToMove.append(member)
+					if destinationChannel.permissions_for(member).connect:
+						print(member.name + " Added to listToMove")
+						count = count + 1
+						listToMove.append(member)
+					else:
+						print(f'{member} does not have permission to join {destinationChannel}.')
 				print(count)
 				count2 = 0
 				print(len(listToMove))
