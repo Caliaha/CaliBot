@@ -1445,13 +1445,14 @@ class WoW():
 				box = BoxIt()
 				box.setTitle('{} of {} for {} on {} difficulty'.format(title, guild, raid.capitalize(), difficulty.capitalize()))
 				for tr in re.findall('<tr>(.*?)(?=<tr>|</table>)', str(rankingTable), re.DOTALL):
-					tr = re.sub('<img class="wrong-spec-icon" src=".*?"/>\n', '', tr)
+					tr = re.sub('<img class=".*?" src=".*?"/>\n', '', tr)
 					tr = re.sub(' wrong-spec', '', tr)
 					
 					rankingMatch = rankingPattern.search(str(tr))
 					if rankingMatch:
 						characterData = ([ rankingMatch[2] ])
 						for bossRanks in bossRankPattern.findall(tr):
+							#print(bossRanks[1])
 							if bossRanks[1] == '-':
 								characterData.append(bossRanks[1])
 							elif re.search('\.', bossRanks[1]):
@@ -1571,6 +1572,7 @@ class WoW():
 				await updateableMessage.delete()
 			except:
 				pass
+			return True
 	
 	@commands.command()
 	@deleteMessage()
