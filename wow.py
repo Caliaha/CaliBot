@@ -794,7 +794,7 @@ class WoW():
 			full = True
 		except:
 			full = False
-		
+
 		
 		if (len(args) == 0 and ctx.message.guild is not None):
 			guild, realm, updateabledMessage = await self.fetchGuildFromDB(ctx)
@@ -1358,6 +1358,16 @@ class WoW():
 	@commands.command()
 	@deleteMessage()
 	@doThumbs()
+	async def rio(self, ctx, toon: str, realm: str):
+		"""Shows raider.io information for character"""
+
+		region = 'us'
+		fields = 'gear,guild,mythic_plus_scores_by_season,raid_progression'
+		characterJSON = await fetchWebpage(self, f'https://raider.io/api/v1/characters/profile?region={region}&realm={urllib.parse.quote_plus(realm)}&name={toon}&fields={urllib.parse.quote_plus(fields)}')
+
+	@commands.command()
+	@deleteMessage()
+	@doThumbs()
 	async def rankings(self, ctx, *args):
 		"""Shows warcraftlogs.com rankings for a guild"""
 		difficulties = { 'normal': '3', 'heroic': '4' }
@@ -1469,6 +1479,52 @@ class WoW():
 	@commands.command()
 	@deleteMessage()
 	@doThumbs()
+	async def hoa(self, ctx, *args):
+		"""Show guild Heart of Azeroth levels"""
+		async with ctx.channel.typing():
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
+			if not (guild, realm):
+				return False
+			
+			await self.validateAccessToken()
+			try:
+				guildJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/guild/{realm}/{guild}?fields=members&locale=en_US&access_token={self.accessToken}')
+				guildData = json.loads(guildJSON)
+			except Exception as e:
+				await ctx.send('Failed to fetch webpage or parse json', e)
+				return False
+			hoaData = {}
+			box = BoxIt()
+			box.setTitle(f'Heart of Azeroth levels for {guild}')
+			for member in guildData['members']:
+					if int(member['character']['level']) < 120:
+						continue
+					try:
+						itemsJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/character/{member["character"]["realm"]}/{member["character"]["name"]}?fields=items,guild&locale=en_US&access_token={self.accessToken}')
+						toon = json.loads(itemsJSON)
+					except:
+						print('Skipping:', member['character']['name'])
+						continue
+
+					hoaLevel = 0
+					try:
+						hoaLevel = int(toon['items']['neck']['azeriteItem']['azeriteLevel'])
+					except:
+						pass
+					if (hoaLevel > 0):
+						box.addRow([ member['character']['name'], toon['items']['averageItemLevelEquipped'], hoaLevel ])
+			box.sort(2, True)
+			box.setHeader( ['Name', 'Item Level', 'Heart of Azeroth Level' ] ) # FIX ME Shouldn't have to put header after the sort
+			await self.sendBulkyMessage(ctx, box.box(), '```', '```')
+			try:
+				await updateableMessage.delete()
+			except:
+				pass
+			return True
+
+	@commands.command()
+	@deleteMessage()
+	@doThumbs()
 	async def enchantcheck(self, ctx, *, ranksToCheck):
 		"""Show missing enchants for guild rank"""
 		async with ctx.channel.typing():
@@ -1508,6 +1564,7 @@ class WoW():
 					totalSockets = 0
 					sabersEye = False
 					gemsCheapEquipped = 0
+					hoaLevel = 0
 					gemsMidTierEquipped = 0
 					for gear in gearSlots:
 						socketData = ''
@@ -1610,6 +1667,12 @@ class WoW():
 		gemsMidTierEquipped = 0
 		#legendariesNotUpgraded = 0
 		#totalLegendariesEquipped = 0
+		hoaLevel = 0
+
+		try:
+			hoaLevel = int(toon['items']['neck']['azeriteItem']['azeriteLevel'])
+		except:
+			pass
 		for gear in gearSlots:
 			#embed.add_field(name="Gear", value=gearData, inline=True)
 			#gearData = ""
@@ -1707,6 +1770,8 @@ class WoW():
 		#	missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendary not at max level'
 		#elif (legendariesNotUpgraded > 1):
 		#	missingStuff += '\n' + str(legendariesNotUpgraded) + ' legendaries not at max level'
+		if (hoaLevel > 0):
+			embed.add_field(name='Heart of Azeroth', value=hoaLevel, inline=True)
 		if (missingStuff != '\n'):
 			embed.add_field(name="Gear Check", value=missingStuff, inline=True)
 		#print(toon['name'] + '** of **' + toon['realm'] + str(toon['items']['averageItemLevelEquipped']) + '* equipped, *' + str(toon['items']['averageItemLevel']) + '* total')
