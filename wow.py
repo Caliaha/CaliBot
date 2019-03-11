@@ -249,6 +249,99 @@ class WoW():
 		finally:
 			connection.close()
 
+	async def updateRaiderIO(self, guild, realm, message, fullWait = False):
+		try:
+			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
+			rawJSON = await fetchWebpage(self, 'https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
+		except:
+			return False
+
+		guilds = json.loads(rawJSON)
+		guildData = None
+		try:
+			for guildJSON in guilds['matches']:
+				if guildJSON['type'] == 'guild' and guildJSON['data']['realm']['name'].lower() == realm.lower() and guildJSON['data']['name'].lower() == guild.lower():
+					guild = guildJSON['data']['name']
+					realm = guildJSON['data']['realm']['slug']
+					guildData = guildJSON
+					print("Found guild")
+		except:
+			print('Unable to find guild')
+			return False
+		
+		if guildData is None:
+			return False
+
+		fullWaitWarning = ''
+		if fullWait:
+			fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
+
+		embed=discord.Embed(
+			title='Requesting raider.io update for {}'.format(guild, realm.capitalize()),
+			url='https://raider.io/guilds/us/{}/{}/roster#mode=mythic_plus'.format(urllib.parse.quote(realm), urllib.parse.quote(guild)),
+			color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.add_field(name='Status', value='N/A', inline=True)
+		embed.add_field(name='Time Left', value='N/A', inline=True)
+		embed.add_field(name='Queue Position', value='N/A', inline=True)
+		embed.add_field(name='Crawled', value='N/A', inline=True)
+		
+		try:
+			message
+		except Exception as e:
+			print(e)
+			#updateableMessage = await ctx.send(fullWaitWarning + 'Performing lookup for <' + guild + '> on ' + realm)
+			message = await ctx.send(embed=embed)
+
+		try:
+			embed.set_field_at(0, name='Status', value='Unknown')
+			embed.description = fullWaitWarning
+			await message.edit(embed=embed, content='')
+
+			data = { 'realmId': guildData['data']['realm']['id'], 'realm': guildData['data']['realm']['name'], 'region': guildData['data']['region']['slug'], 'guild': guildData['data']['name'], 'numMembers': 50 }
+
+			postJSON = json.loads(await postWebdata(self, 'https://raider.io/api/crawler/guilds', data))
+			#print(pageJSON['success'], pageJSON['jobData']['jobId'], pageJSON['jobData']['batchId'])
+			checkStatus = True
+			startTime = time.time()
+			while checkStatus:
+				status = json.loads(await fetchWebpage(self, 'https://raider.io/api/crawler/monitor?batchId=' + postJSON['jobData']['batchId']))
+				try:
+					print(status['batchInfo']['status'])
+					try:# It's try/excepts all the way down
+						embed.set_field_at(2, name='Queue Position', value='{}/{}'.format(status['batchInfo']['jobs'][0]['positionInQueue'], status['batchInfo']['jobs'][0]['totalItemsInQueue']), inline=True)
+					except:
+						pass
+						#await updateableMessage.edit(content=fullWaitWarning + 'Attempting to update website before I request the data\nTime left before I abort this update: {:.0f}\n'.format((startTime + 120 - time.time())) + queueStatus + 'Status: {} Currently Processing: {}/{}'.format(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']))
+					embed.set_field_at(0, name='Status', value='{}'.format(status['batchInfo']['status']), inline=True)
+					embed.set_field_at(1, name='Time Left', value='{:.0f}'.format((startTime + 120 - time.time())), inline=True)
+					embed.set_field_at(3, name='Crawled', value='{}/{}'.format(status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities']), inline=True)
+					await message.edit(embed=embed, content='')
+				except Exception as e:
+					print(status)
+					print("Could not update !mythic updateable message", e)
+				if  startTime + 120 < time.time():
+					if not fullWait:
+						checkStatus = False
+						print("breaking from checkStatus because alotted time ran out")
+				if ((status['batchInfo']['status'] != 'waiting' and status['batchInfo']['status'] != 'active')):
+					checkStatus = False
+					print("breaking from checkStatus because: " + status['batchInfo']['status'])
+				#print(status['batchInfo']['status'], status['batchInfo']['totalJobsRemaining'], status['batchInfo']['numCrawledEntities'])
+				await asyncio.sleep(0.4)
+			print("Done requesting update from raider.io")
+			await asyncio.sleep(6) # Just in case website still needs a little time to update things
+		except Exception as e:
+			try:
+				await message.edit(content='Attempting to update website before I request the data\nStatus: Failed\nRaider.io will process the update at some point in the future but I am not waiting for it\nWill use older information', delete_after=60)
+			except Exception as e:
+				print("Could not update !mythic updateable message", e)
+			print("Failed to request raider.io guild update", e)
+		try:
+			await message.delete()
+		except:
+			pass
+		return True
+
 	@commands.command()
 	@deleteMessage()
 	@doThumbs()
@@ -1475,6 +1568,71 @@ class WoW():
 				box.setHeader( ['Name', 'Avg', 'CoL', 'Jade', 'Grg', 'Opul', 'CoC', 'Rasta', 'Gnome', 'Block', 'Jaina', '*'] )
 				await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 		return True
+
+	async def fetchGuildTabard(self, guild, realm, faction):
+		try:
+			await self.validateAccessToken()
+			guildJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/guild/{realm}/{guild}?locale=en_US&access_token={self.accessToken}')
+			guildData = json.loads(guildJSON)
+			return f'http://tabard.gnomeregan.info/tabard.php?icon=emblem_{guildData["emblem"]["icon"]:0>2}&border=border_{guildData["emblem"]["border"]:0>2}&iconcolor={guildData["emblem"]["iconColor"][2:]}&bgcolor={guildData["emblem"]["backgroundColor"][2:]}&bordercolor={guildData["emblem"]["borderColor"][2:]}&faction={faction}'
+		except:
+			print('Failed to fetch guild tabard', guild, realm, faction)
+			return None
+
+	@commands.command()
+	@deleteMessage()
+	@doThumbs()
+	async def prog(self, ctx, *args):
+		"""Shows raider.io guild raid progression"""
+		
+		region = 'us'
+		raids = [ 'battle-of-dazaralor', 'uldir' ]
+		difficulties = [ 'normal', 'heroic', 'mythic' ]
+		raidProper = { 'battle-of-dazaralor': 'Battle of Dazaralor', 'uldir': 'Uldir' }
+		async with ctx.channel.typing():
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
+			
+			if not (guild, realm):
+				return False
+			await self.updateRaiderIO(guild, realm, updateableMessage)
+			try:
+				guildJSON = await fetchWebpage(self, f'https://raider.io/api/v1/guilds/profile?region={region}&realm={urllib.parse.quote(realm)}&name={urllib.parse.quote(guild)}&fields=raid_progression%2Craid_rankings')
+				guildData = json.loads(guildJSON)
+			except Exception as e:
+				await ctx.send('Failed to fetch webpage or parse json', e)
+				return False
+
+			embed=discord.Embed(
+				title = f'Raid Progression for {guildData["name"]}-{guildData["realm"]}',
+				#description = 'Allan please add details',
+				url = guildData['profile_url'],
+				color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+			embed.set_author(
+				name = 'raider.io',
+				url = 'https://raider.io',
+				icon_url = 'https://cdnassets.raider.io/images/brand/Mark_2ColorWhite.png')
+			
+			for raid in raids:
+				if raid in guildData['raid_rankings']:
+					data = []
+					for difficulty in difficulties:
+						if difficulty in guildData['raid_rankings'][raid]:
+							data.append(f'{difficulty.capitalize()} -> Realm: {guildData["raid_rankings"][raid][difficulty]["realm"]:>3}, Region: {guildData["raid_rankings"][raid][difficulty]["region"]:>5}, World: {guildData["raid_rankings"][raid][difficulty]["world"]:>5}')
+					embed.add_field(
+						name = f'{raidProper[raid]}',
+						value = f'```{chr(10).join(data)}```',
+						inline = False)
+			
+			#try:
+			#	tabardURL = await self.fetchGuildTabard(guildData["name"], guildData["realm"], guildData["faction"])
+			#	if tabardURL:
+			#		embed.set_thumbnail(url = f'{tabardURL}&{str(time.time())}')
+			#except:
+			#	pass
+			#embed.add_field(name="Equipped Item Level", value=str(toon['items']['averageItemLevelEquipped']), inline=True)
+			#embed.add_field(name="Total Item Level", value=str(toon['items']['averageItemLevel']), inline=True)
+			await ctx.send(embed=embed)
+			return True
 
 	@commands.command()
 	@deleteMessage()
