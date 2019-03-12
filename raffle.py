@@ -16,7 +16,7 @@ class Raffle():
 		help = { }
 		help['!tickets [@member]'] = 'Lists amount of tickets member has'
 		help['!ticketlist'] = 'Lists tickets of all members in database'
-		help['!drawtest'] = 'Simulates 10,000 draws and show statistics'
+		help['!odds'] = 'Simulates 10,000 draws and show statistics'
 		help['!draw'] = 'Picks winner from ticket holders'
 		help['!giveticket @member [amount]'] = 'Gives one or amount of tickets to member, can be negative'
 		help['!removetickets @member'] = 'Removes all tickets from member'
@@ -161,7 +161,7 @@ class Raffle():
 
 	@commands.command()
 	@doThumbs()
-	async def drawtest(self, ctx, threshold: int = 1):
+	async def odds(self, ctx, threshold: int = 1):
 		try:
 			async with ctx.channel.typing():
 				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
@@ -193,11 +193,11 @@ class Raffle():
 							winners[winner] = 1
 					
 					box = BoxIt()
-					box.setTitle('Drawing Test with {} iterations'.format(testIterations))
+					box.setTitle('Odds over {} iterations'.format(testIterations))
 					for winner in winners:
 						box.addRow([ ctx.guild.get_member(int(winner)), tickets[winner], winners[winner], round((winners[winner] / testIterations) * 100, 2) ])
 					box.sort(2, True)
-					box.setHeader([ 'Winner', 'Tickets', 'Win Counts', 'Win Percentage' ])
+					box.setHeader([ 'Name', 'Tickets', 'Win Counts', 'Win Percentage' ])
 					await sendBigMessage(self, ctx, box.box())
 		finally:
 			connection.close()
@@ -220,7 +220,7 @@ class Raffle():
 						box.addRow([ ctx.guild.get_member(int(result['discordID'])), int(result['tickets']) ])
 
 					box.sort(1, True)
-					box.setHeader([ 'Ticket Holder', 'Tickets' ])
+					box.setHeader([ 'Name', 'Tickets' ])
 					await sendBigMessage(self, ctx, box.box())
 		finally:
 			connection.close()
