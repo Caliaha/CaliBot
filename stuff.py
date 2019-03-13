@@ -288,7 +288,7 @@ class BoxIt():
 		row[0] = self.BOX_UPPER_LEFT
 		row[len(row)-1] = self.BOX_UPPER_RIGHT
 		rowTemp = ''.join(row)
-		rowTemp = rowTemp[0:4] + self.title + rowTemp[-(len(rowTemp)-(len(self.title)+4)):]
+		rowTemp = rowTemp[0:3] + u'╡' + self.title + u'╞' + rowTemp[-(len(rowTemp)-(len(self.title)+5)):]
 		row = rowTemp
 
 		return row
