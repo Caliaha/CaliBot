@@ -1667,12 +1667,13 @@ class WoW():
 					hoaLevel = 0
 					try:
 						hoaLevel = int(toon['items']['neck']['azeriteItem']['azeriteLevel'])
+						hoaItemLevel = int(toon['items']['neck']['itemLevel'])
 					except:
 						pass
 					if (hoaLevel > 0):
-						box.addRow([ member['character']['name'], toon['items']['averageItemLevelEquipped'], hoaLevel ])
+						box.addRow([ member['character']['name'], f'{hoaItemLevel}/{toon["items"]["averageItemLevelEquipped"]}', hoaLevel ])
 			box.sort(2, True)
-			box.setHeader( ['Name', 'Item Level', 'Heart of Azeroth Level' ] ) # FIX ME Shouldn't have to put header after the sort
+			box.setHeader( ['Name', 'Neck/Equipped Item Level', 'HoA Level' ] ) # FIX ME Shouldn't have to put header after the sort
 			await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 			try:
 				await updateableMessage.delete()
