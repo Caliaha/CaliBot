@@ -30,7 +30,9 @@ BFA_ENCHANTS = [ 3368, 3370, 3847, 5942, 5943, 5944, 5945, 5946, 5948, 5949, 595
 BFA_ENCHANTS_CHEAP = [ 5938, 5939, 5940, 5941 ]
 BFA_GEMS = [ 154126, 154127, 154128, 154129 ]
 BFA_GEMS_SABER = [ 153707, 153708, 153709 ]
-BFA_GEMS_CHEAP = [ 153710, 153711, 153712 ] 
+BFA_GEMS_CHEAP = [ 153710, 153711, 153712 ]
+
+REPUTATION_NAME = [ 'Hated', 'Hostile', 'Unfriendly', 'Neutral', 'Friendly', 'Honored', 'Revered', 'Exalted' ]
 # Deadly Deep Chemirine, Quick Lightsphene,  Masterful Argulite, Versatile Labradorite
 # Saber's Eye of Strength, Saber's Eye of Agility, Saber's Eye of Intellect
 # Deadly Eye of Prophecy, Quick Dawnlight, Versatile Maelstrom Sapphire, Masterful Shadowruby
@@ -1652,28 +1654,48 @@ class WoW():
 				await ctx.send('Failed to fetch webpage or parse json', e)
 				return False
 			hoaData = {}
+			try:
+				await updateableMessage.edit(content='Fetching data for all guild members at level 120, please be patient')
+			except:
+				pass
 			box = BoxIt()
 			box.setTitle(f'Heart of Azeroth levels for {guild}')
 			for member in guildData['members']:
 					if int(member['character']['level']) < 120:
 						continue
 					try:
-						itemsJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/character/{member["character"]["realm"]}/{member["character"]["name"]}?fields=items,guild&locale=en_US&access_token={self.accessToken}')
+						itemsJSON = await fetchWebpage(self, f'https://us.api.blizzard.com/wow/character/{member["character"]["realm"]}/{member["character"]["name"]}?fields=items,guild,quests,reputation&locale=en_US&access_token={self.accessToken}')
 						toon = json.loads(itemsJSON)
 					except:
 						print('Skipping:', member['character']['name'])
 						continue
 
 					hoaLevel = 0
+					reputationLevel = 0
+					try:
+						for rep in toon['reputation']:
+							if rep['id'] == 2164:
+								reputationLevel = rep['standing']
+								break
+					except:
+						pass
+
 					try:
 						hoaLevel = int(toon['items']['neck']['azeriteItem']['azeriteLevel'])
 						hoaItemLevel = int(toon['items']['neck']['itemLevel'])
 					except:
 						pass
+					hoaUpgrade = False
+					#/{toon["items"]["averageItemLevelEquipped"]}
+					#try:
+					if 54964 in toon['quests']:
+						hoaUpgrade = True
+					#except:
+					#	pass
 					if (hoaLevel > 0):
-						box.addRow([ member['character']['name'], f'{hoaItemLevel}/{toon["items"]["averageItemLevelEquipped"]}', hoaLevel ])
+						box.addRow([ member['character']['name'], f'{hoaItemLevel}', hoaLevel, hoaUpgrade, REPUTATION_NAME[reputationLevel] ])
 			box.sort(2, True)
-			box.setHeader( ['Name', 'Neck/Equipped Item Level', 'HoA Level' ] ) # FIX ME Shouldn't have to put header after the sort
+			box.setHeader( ['Name', 'Neck', 'HoA Level', '+10 Upgrade', 'CoA Rep' ] ) # FIX ME Shouldn't have to put header after the sort
 			await self.sendBulkyMessage(ctx, box.box(), '```', '```')
 			try:
 				await updateableMessage.delete()
