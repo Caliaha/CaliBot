@@ -1766,6 +1766,8 @@ class WoW():
 												sabersEye = True
 											elif quality in BFA_GEMS_CHEAP:
 												gemsCheapEquipped += 1
+											else:
+												gemCount += 1
 										else:
 											gemCount += 1
 									except:
