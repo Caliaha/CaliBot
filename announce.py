@@ -6,7 +6,7 @@ from stuff import BoxIt, checkPermissions, cleanUserInput, deleteMessage, doThum
 from subprocess import Popen, PIPE
 import time
 
-class Announce():
+class Announce(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.file = '-w=' + self.bot.TTS_FILE
@@ -114,6 +114,7 @@ class Announce():
 		print('No Valid voice channels found')
 		return False
 
+	@commands.Cog.listener()
 	async def on_voice_state_update(self, member, before, after):
 		if member.bot:
 			try:
@@ -258,6 +259,7 @@ class Announce():
 		await self.removeFromDB(guild.id, channel.id)
 
 	async def joinOrMove(self, guild, channel): #FIX ME
+		print('JoinOrMove', guild, channel)
 		if guild.voice_client is not None:
 			if guild.voice_client.channel is channel:
 				print('Leaving voice channel {}'.format(channel.name))
@@ -267,6 +269,7 @@ class Announce():
 			if not channel.permissions_for(guild.me).connect:
 				print(f'I do not have permission to join {channel}')
 				return False
+
 			await guild.voice_client.move_to(channel)
 			await self.updateDB(guild.id, channel.id)
 
@@ -278,6 +281,8 @@ class Announce():
 				print(f'I do not have permission to join {channel}')
 				return False
 			await channel.connect()
+
+			#discord.py 1.0.0a1676+g3f06f24 In case of emergency revert to this version
 
 			if guild.voice_client:
 				self.guildQueue[guild.id] = self.bot.loop.create_task(self.processQueue(guild))
@@ -293,6 +298,7 @@ class Announce():
 				await self.queue[guild.id].put(tts)
 			return
 
+	@commands.Cog.listener()
 	async def on_ready(self):
 		print("Attempting to reconnect to all voice channels")
 		try:
@@ -310,11 +316,13 @@ class Announce():
 				results = cursor.fetchall()
 				for result in results:
 					print(result['guildID'], result['channel'])
-					guild = self.bot.get_guild(int(result['guildID'])) # Fix me, change these to ints in the database later
-					channel = self.bot.get_channel(int(result['channel']))
-					print(guild, channel)
+					try:
+						guild = self.bot.get_guild(int(result['guildID'])) # Fix me, change these to ints in the database later
+						channel = self.bot.get_channel(int(result['channel']))
+					except:
+						pass
 					if guild and channel:
-						print(guild.id, channel)
+						print('Join', guild, channel)
 						await self.joinOrMove(guild, channel)
 		except Exception as e:
 			print("on_ready() unable to connect to db or something", e)
