@@ -11,7 +11,7 @@ import time
 import urllib.parse
 import urllib.request
 
-class Diablo3():
+class Diablo3(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.lastLookup = {}
