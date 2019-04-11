@@ -1,10 +1,11 @@
 import aiohttp
 import asyncio
 import discord
+from discord.ext import commands
 import re
 from stuff import fetchWebpage
 
-class WoWToken():
+class WoWToken(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.bot.loop.create_task(self.background_lookup())
