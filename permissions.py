@@ -3,7 +3,7 @@ from discord.ext import commands
 import pymysql.cursors
 from stuff import getRoleID, superuser
 
-class Permissions():
+class Permissions(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.commands = [ 'color', 'wow' ]
