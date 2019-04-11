@@ -7,7 +7,7 @@ import random
 import secrets
 from stuff import BoxIt, checkPermissions, doThumbs, sendBigMessage
 
-class Raffle():
+class Raffle(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		
