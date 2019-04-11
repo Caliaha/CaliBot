@@ -3,7 +3,7 @@ from discord.ext import commands
 import pymysql.cursors
 from stuff import checkPermissions, getSnowflake, superuser, isSuperUser, cleanUserInput
 
-class Settings():
+class Settings(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.settings = [ 'phonetic', 'realm', 'character', 'battletag' ]
