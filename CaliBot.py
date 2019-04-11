@@ -33,20 +33,9 @@ startup_extensions = [ 'announce', 'color', 'permissions', 'guild_management', '
 async def on_ready():
 	print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
 
-#@bot.event
-#async def on_command_error(ctx, error):
-#	print('Beep')
-#	print(ctx.message.author.name)
-#	ctx.send('Beep')
-
 if __name__ == "__main__":
 	for extension in startup_extensions:
-		#try:
 		bot.load_extension(extension)
 		print("Loaded cog: ", extension)
-		#except Exception as e:
-		#	exc = '{}: {}'.format(type(e).__name__, e)
-		#	print('Failed to load extension {}\n{}'.format(extension, exc))
-		#	print(e)
 
 	bot.run(config.DISCORD_TOKEN_TEST)
