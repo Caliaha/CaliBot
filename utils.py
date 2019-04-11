@@ -1,12 +1,16 @@
 from dateutil.relativedelta import relativedelta
+import discord
 from discord.ext import commands
+from io import BytesIO
+from pdf2image import convert_from_path, convert_from_bytes
+import pdfkit
 import pymysql.cursors
 from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser
 import sys
 import time
 import uptime
 
-class utils():
+class utils(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 
@@ -51,6 +55,26 @@ class utils():
 		await ctx.send(self.bot.NAME + ' Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=time.time() - self.bot.startTime)))
 		await ctx.send('Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
 		return True
+
+	def convertwebpagetopdf(self, url):
+		images = [ ]
+		pdf = pdfkit.from_url(url, False)
+		pages = convert_from_bytes(pdf)
+		for page in pages:
+			with BytesIO() as output:
+				page.save(output, format='png')
+				images.append(output.getvalue())
+		
+		return images
+
+	@commands.command()
+	@doThumbs()
+	async def renderpage(self, ctx, url: str):
+		images = await self.bot.loop.run_in_executor(None, self.convertwebpagetopdf, url)
+		for image in images:
+			await ctx.send(file=discord.File(image, 'file.png'))
+		
+		
 
 	@commands.command()
 	@isBotOwner()
@@ -155,6 +179,23 @@ class utils():
 					connection.commit()
 		finally:
 			connection.close()
+	
+	@commands.command()
+	async def addons(self, ctx):
+		embed=discord.Embed(
+			title = 'Mandatory Raiding Addons',
+			description = "[Deadly Boss Mods](https://www.curseforge.com/wow/addons/deadly-boss-mods)\n[Personal Loot Helper](https://www.curseforge.com/wow/addons/personal-loot-helper)\n[GTFO](https://www.curseforge.com/wow/addons/gtfo)",
+			color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.set_thumbnail(url='https://i.imgur.com/LgGVtXz.png')
+		try:
+			await ctx.send(embed=embed)
+		except:
+			pass
+
+	@commands.command()
+	async def text2number(self, ctx, *, text):
+		table = str.maketrans('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', '⓪①②③④⑤⑥⑦⑧⑨ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ')
+		await ctx.send(text.translate(table))
 
 def setup(bot):
 	bot.add_cog(utils(bot))
