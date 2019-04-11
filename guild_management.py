@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from stuff import doThumbs, superuser
 
-class GuildManagement():
+class GuildManagement(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 
