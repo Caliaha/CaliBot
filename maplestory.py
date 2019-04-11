@@ -10,7 +10,7 @@ from stuff import doThumbs, fetchWebpage
 from urllib.parse import urlparse
 import urllib.request
 
-class MapleStory():
+class MapleStory(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.bot.loop.create_task(self.background_lookup())
