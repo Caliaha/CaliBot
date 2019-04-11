@@ -70,7 +70,7 @@ REPUTATION_NAME = [ 'Hated', 'Hostile', 'Unfriendly', 'Neutral', 'Friendly', 'Ho
 # 5425 -> Word of Mastery
 # 5426 -> Word of Versatility
 
-class WoW():
+class WoW(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.lastLookup = {}
@@ -1520,7 +1520,7 @@ class WoW():
 			patch = arguments['patch']
 			patch in patches
 		except:
-			patch = '8.0'
+			patch = '8.1'
 
 		if (not guild and ctx.guild is not None):
 			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
@@ -1879,6 +1879,8 @@ class WoW():
 								#	gemsMidTierEquipped += 1
 								elif quality in BFA_GEMS_CHEAP:
 									gemsCheapEquipped += 1
+								else:
+									gemCount += 1
 							else:
 								gemCount += 1
 						except:
