@@ -515,6 +515,7 @@ class Announce(commands.Cog):
 				await ctx.send(channel.name + ' has been added to the !mdg ignore list.')
 		except Exception as e:
 			print(e)
+			return False
 		finally:
 			connection.close()
 		return True
@@ -553,6 +554,46 @@ class Announce(commands.Cog):
 					cursor.execute(sql, (mdg_ignore, ctx.guild.id))
 					connection.commit()
 				await ctx.send(channel.name + ' has been removed to the !mdg ignore list.')
+		finally:
+			connection.close()
+		return True
+
+	@commands.command()
+	@commands.guild_only()
+	@checkPermissions('voice')
+	@doThumbs()
+	async def mdgupdate(self, ctx):
+		"""Adds channel to ignore list, bot will not pull members from this channel"""
+
+		connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+		removeList = []
+		try:
+			with connection.cursor() as cursor:
+				#Check if entry exists then update or create one
+				sql = "SELECT `mdg_ignore` FROM `guild_defaults` WHERE `guildID`=%s"
+				cursor.execute(sql, (ctx.guild.id))
+				result = cursor.fetchone()
+				if result is not None:
+					if result['mdg_ignore'] is not None:
+						mdg_ignore = result['mdg_ignore'].split()
+					else:
+						mdg_ignore = []
+					
+					for id in mdg_ignore:
+						try:
+							self.bot.get_channel(int(id)).name
+						except Exception as e:
+							print(f'Removing non-existant id: {id}', e)
+							removeList.append(id)
+					
+					
+					newList = [id for id in mdg_ignore if id not in removeList]
+					
+					mdg_ignore = ' '.join(newList)
+					sql = "UPDATE `guild_defaults` SET `mdg_ignore` = %s WHERE `guildID` = %s LIMIT 1"
+					cursor.execute(sql, (mdg_ignore, ctx.guild.id))
+					connection.commit()
+				await ctx.send('Removed the following non-existant channels from database: ' + ', '.join(removeList))
 		finally:
 			connection.close()
 		return True
