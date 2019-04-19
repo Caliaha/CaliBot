@@ -392,17 +392,19 @@ class WoW(commands.Cog):
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
+			print(guild, realm)
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
-		except:
-			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
+		except Exception as e:
+			await ctx.send('Error searching for guild\nUsage: !mythic -g "guild" -s "realm"')
+			print('!mythic', e)
 			return False
 
 		guilds = json.loads(rawJSON)
 		guildData = None
 		try:
 			for guildJSON in guilds['matches']:
-				#print(guildJSON['data']['realm']['name'])
-				#print(guildJSON['data']['name'])
+				print(guildJSON['data']['realm']['name'])
+				print(guildJSON['data']['name'])
 				if guildJSON['type'] == 'guild' and guildJSON['data']['realm']['name'].lower() == realm.lower() and guildJSON['data']['name'].lower() == guild.lower():
 					guild = guildJSON['data']['name']
 					realm = guildJSON['data']['realm']['slug']
@@ -410,12 +412,12 @@ class WoW(commands.Cog):
 					print("Found guild")
 		except:
 			print('Unable to find guild')
-			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error searching for guild\nUsage: !mythic -g "guild" -s "realm"')
 			return False
 		
 		if guildData is None:
 			print('Unable to find guild')
-			await ctx.send('Error searching for guild\nUsage: !mythic "guild" "realm"')
+			await ctx.send('Error searching for guild\nUsage: !mythic -g "guild" -s "realm"')
 			return False
 
 		embed=discord.Embed(title='Mythic+ Data for {} on {}'.format(guild, realm.capitalize()), url='https://raider.io/guilds/us/{}/{}/roster#mode=mythic_plus'.format(urllib.parse.quote(realm), urllib.parse.quote(guild)), color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
