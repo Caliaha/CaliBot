@@ -4,8 +4,9 @@ import discord
 from discord.ext import commands
 import pymysql.cursors
 import random
+import re
 import secrets
-from stuff import BoxIt, checkPermissions, doThumbs, sendBigMessage
+from stuff import BoxIt, checkPermissions, deleteMessage, doThumbs, sendBigMessage
 
 class Raffle(commands.Cog):
 	def __init__(self, bot):
@@ -160,6 +161,7 @@ class Raffle(commands.Cog):
 		return True
 
 	@commands.command()
+	@commands.guild_only()
 	@doThumbs()
 	async def odds(self, ctx, threshold: int = 1):
 		try:
@@ -204,6 +206,7 @@ class Raffle(commands.Cog):
 		return True
 
 	@commands.command()
+	@commands.guild_only()
 	@doThumbs()
 	async def ticketlist(self, ctx):
 		try:
@@ -216,14 +219,165 @@ class Raffle(commands.Cog):
 
 					box = BoxIt()
 					box.setTitle('Ticket Holders')
+					totalTickets = 0
+					totalHolders = 0
 					for result in results:
+						totalHolders += 1
+						totalTickets += int(result['tickets'])
 						box.addRow([ ctx.guild.get_member(int(result['discordID'])), int(result['tickets']) ])
 
 					box.sort(1, True)
 					box.setHeader([ 'Name', 'Tickets' ])
+					box.setFooter([ f'{totalHolders} entrees', f'{totalTickets} tickets' ])
 					await sendBigMessage(self, ctx, box.box())
 		finally:
 			connection.close()
+		return True
+
+	@commands.command()
+	@commands.guild_only()
+	@doThumbs()
+	async def rafflelist(self, ctx):
+		try:
+			async with ctx.channel.typing():
+				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+				async with connection.cursor() as cursor:
+					sql = "SELECT `itemName`, `tickets` FROM `raffleitems` WHERE `guildID`=%s ORDER BY `itemName` ASC"
+					await cursor.execute(sql, (ctx.guild.id))
+					results = await cursor.fetchall()
+
+					box = BoxIt()
+					box.setTitle('Trade-in Value')
+					for result in results:
+						box.addRow([ result['itemName'], int(result['tickets']) ])
+
+					#box.sort(1, True)
+					box.setHeader([ 'Item', 'Tickets' ])
+					await sendBigMessage(self, ctx, box.box())
+		finally:
+			connection.close()
+		return True
+
+	@commands.command()
+	@checkPermissions('raffle')
+	@commands.guild_only()
+	@doThumbs()
+	async def raffleadd(self, ctx, item, tickets):
+		try:
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				#Check if entry exists then update or create one
+				sql = "SELECT `tickets` FROM `raffleitems` WHERE `guildID`=%s AND `itemName`=%s"
+				cursor.execute(sql, (ctx.guild.id, item))
+				result = cursor.fetchone()
+				if result is None:
+					sql = "INSERT INTO `raffleitems` (`guildID`, `itemName`, `tickets`) VALUES(%s, %s, %s)"
+					cursor.execute(sql, (ctx.guild.id, item, tickets))
+					connection.commit()
+				else:
+					sql = "UPDATE `raffleitems` SET `tickets` = %s WHERE `guildID`=%s AND `itemName`=%s LIMIT 1"
+					cursor.execute(sql, (tickets, ctx.guild.id, item))
+					connection.commit()
+				await ctx.send(f'{item} is worth {tickets}')
+				return True
+		finally:
+			connection.close()
+
+	@commands.command()
+	@checkPermissions('raffle')
+	@commands.guild_only()
+	@deleteMessage()
+	@doThumbs()
+	async def raffleedit(self, ctx):
+		updateMode = True
+		help = 'Commands are:\nadd "item name" tickets\nedit id item|tickets\ndel id\nstop'
+		editMessage = await ctx.send(help)
+		def check(m):
+			return m.author == ctx.author 
+		while(updateMode):
+			try:
+				async with ctx.channel.typing():
+					connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+					async with connection.cursor() as cursor:
+						sql = "SELECT `id`, `itemName`, `tickets` FROM `raffleitems` WHERE `guildID`=%s ORDER BY `itemName` ASC"
+						await cursor.execute(sql, (ctx.guild.id))
+						results = await cursor.fetchall()
+
+						box = BoxIt()
+						box.setTitle('Trade-in Value')
+						for result in results:
+							box.addRow([ int(result['id']), result['itemName'], int(result['tickets']) ])
+
+						box.setHeader([ 'ID', 'Item', 'Tickets' ])
+						await editMessage.edit(content=f'```{box.box()}\n{help}```')
+						#await sendBigMessage(self, ctx, box.box())
+			finally:
+				connection.close()
+
+			try:
+				msg = await self.bot.wait_for('message', timeout=180.0, check=check)
+				try:
+					await msg.delete()
+				except:
+					pass
+			except asyncio.TimeoutError:
+				updateMode = False
+				await ctx.send('No command receieved in 180 seconds, exiting edit mode.')
+			else:
+				if msg.content == 'stop':
+					updateMode = False
+				addRegex = re.compile('^add "(.*?)" (\d+)$')
+				editRegex = re.compile('^edit (\d+) (.*?|\d+)$')
+				deleteRegex = re.compile('^del (\d+)$')
+				addCommand = addRegex.match(msg.content)
+				editCommand = editRegex.match(msg.content)
+				deleteCommand = deleteRegex.match(msg.content)
+
+				if addCommand and addCommand[1] and addCommand[2]:
+					try:
+						connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+						async with connection.cursor() as cursor:
+							sql = "INSERT INTO `raffleitems` (`guildID`, `itemName`, `tickets`) VALUES(%s, %s, %s)"
+							await cursor.execute(sql, (ctx.guild.id, addCommand[1], addCommand[2]))
+							await connection.commit()
+					except Exception as e:
+						print(e)
+					finally:
+						connection.close()
+
+				if editCommand and editCommand[1] and editCommand[2]:
+						try:
+							tickets = int(editCommand[2])
+							sql = "UPDATE `raffleitems` SET `tickets`=%s WHERE `guildID`=%s and `id`=%s LIMIT 1"
+						except:
+							sql = "UPDATE `raffleitems` SET `itemName`=%s WHERE `guildID`=%s and `id`=%s LIMIT 1"
+						try:
+							connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+							async with connection.cursor() as cursor:
+								await cursor.execute(sql, (editCommand[2], ctx.guild.id, editCommand[1]))
+								await connection.commit()
+						except Exception as e:
+							print(e)
+						finally:
+							connection.close()
+
+				if deleteCommand and deleteCommand[1]:
+					try:
+						connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+						async with connection.cursor() as cursor:
+							sql = "DELETE FROM `raffleitems` WHERE `guildID`=%s and `id`=%s LIMIT 1"
+							await cursor.execute(sql, (ctx.guild.id, deleteCommand[1]))
+							await connection.commit()
+					except Exception as e:
+						print(e)
+						await ctx.send('Error Updating Database')			
+					finally:
+						connection.close()
+		
+		try:
+			await editMessage.delete()
+		except:
+			pass
 		return True
 
 def setup(bot):
