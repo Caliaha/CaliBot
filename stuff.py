@@ -191,6 +191,7 @@ class BoxIt():
 	BOX_LOWER_LEFT = u'╚'
 	BOX_LOWER_RIGHT = u'╝'
 	BOX_HORIZ_CONNECTOR = u'═'
+	BOX_HORIZ_CONNECTOR_THIN = u'─'
 	BOX_VERT_CONNECTOR = u'║'
 	BOX_VERT_HORIZ_CONNECTOR_LEFT = u'╠'
 	BOX_VERT_HORIZ_CONNECTOR_RIGHT = u'╣'
@@ -202,6 +203,7 @@ class BoxIt():
 	def __init__(self):
 		self.title = ''
 		self.header = False
+		self.footer = False
 		self.data = []
 		self.biggest = {}
 
@@ -236,6 +238,10 @@ class BoxIt():
 		self.header = True
 		self.data.insert(0, header)
 		self.updateWidestColumn(header)
+
+	def setFooter(self, footer):
+		self.footer = footer
+		self.updateWidestColumn(footer)
 	
 	def padString(self, string, padAmount, padStart = False, padCharacter = " "):
 		if type(string) == int or type(string) == float: # Right align integers
@@ -266,20 +272,24 @@ class BoxIt():
 		row.append(self.BOX_VERT_CONNECTOR)
 		return row
 		
-	def generateSeperatorLine(self, data, lineChar = False, seperator = False):
+	def generateSeperatorLine(self, data, lineChar = False, seperator = False, startChar = False, endChar = False):
 		if not lineChar:
 			lineChar = self.BOX_HORIZ_CONNECTOR
 		if not seperator:
 			seperator = self.BOX_INTERNAL_PASSTHROUGH_VERT
+		if not startChar:
+			startChar = self.BOX_VERT_HORIZ_CONNECTOR_LEFT
+		if not endChar:
+			endChar = self.BOX_VERT_HORIZ_CONNECTOR_RIGHT
 		width = 0
 		row = []
-		row.append(self.BOX_VERT_HORIZ_CONNECTOR_LEFT)
+		row.append(startChar)
 		for index, item in enumerate(data):
 			if index != 0:
 				row.append(seperator)
 			row.append(self.padString('', self.biggest[index]+2, False, lineChar))
 			width += len(str(item))
-		row.append(self.BOX_VERT_HORIZ_CONNECTOR_RIGHT)
+		row.append(endChar)
 		return row
 
 	def generateFirstLine(self):
@@ -314,6 +324,10 @@ class BoxIt():
 			box.append(self.generateRow(data))
 			if index==0 and self.header:
 				box.append(self.generateSeperatorLine(data))
+
+		if self.footer:
+			box.append(self.generateSeperatorLine(self.footer, self.BOX_HORIZ_CONNECTOR_THIN, u'┼', u'╟', u'╢'))
+			box.append(self.generateRow(self.footer))
 
 		box.append(self.generateLastLine())
 		
