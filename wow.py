@@ -1314,7 +1314,7 @@ class WoW(commands.Cog):
 	@deleteMessage()
 	@doThumbs()
 	async def dps(self, ctx, *args):
-		"""Shows warcraftlogs.com rankings for a guild"""
+		"""Shows warcraftlogs.com dps/heals for a guild"""
 		difficulties = { 'normal': '3', 'heroic': '4' }
 		categories = [ 'today', 'historical' ]
 		brackets = { 'overall': '0', 'itemlevel': '1' }
@@ -1452,7 +1452,7 @@ class WoW(commands.Cog):
 				pass
 			return True
 
-	@commands.command()
+	@commands.command(hidden=True) # Not Finished
 	@deleteMessage()
 	@doThumbs()
 	async def rio(self, ctx, toon: str, realm: str):
