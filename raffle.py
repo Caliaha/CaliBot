@@ -2,11 +2,12 @@ import aiomysql
 import asyncio
 import discord
 from discord.ext import commands
+import html
 import pymysql.cursors
 import random
 import re
 import secrets
-from stuff import BoxIt, checkPermissions, deleteMessage, doThumbs, sendBigMessage
+from stuff import BoxIt, checkPermissions, deleteMessage, doThumbs, fetchWebpage, sendBigMessage
 
 class Raffle(commands.Cog):
 	def __init__(self, bot):
@@ -247,12 +248,11 @@ class Raffle(commands.Cog):
 					results = await cursor.fetchall()
 
 					box = BoxIt()
-					box.setTitle('Trade-in Value')
+					box.setTitle('Raffle Items')
 					for result in results:
-						box.addRow([ result['itemName'], int(result['tickets']) ])
+						box.addRow([ result['itemName'], result['tickets'] ])
 
-					#box.sort(1, True)
-					box.setHeader([ 'Item', 'Tickets' ])
+					box.setHeader([ 'Item', 'Trade-in Value' ])
 					await sendBigMessage(self, ctx, box.box())
 		finally:
 			connection.close()
@@ -284,6 +284,79 @@ class Raffle(commands.Cog):
 			connection.close()
 
 	@commands.command()
+	@commands.guild_only()
+	@deleteMessage()
+	@doThumbs()
+	async def raffleexport(self, ctx):
+		data = '^1^T'
+		try:
+			connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+			async with connection.cursor() as cursor:
+				sql = "SELECT `itemID`, `tickets` FROM `raffleitems` WHERE `guildID`=%s ORDER BY `itemName` ASC"
+				await cursor.execute(sql, (ctx.guild.id))
+				results = await cursor.fetchall()
+				
+				for result in results:
+					data = f'{data}^N{result["itemID"]}^N{result["tickets"]}'
+				data = f'{data}^t^^'
+		except Exception as e:
+			print('Failed to do db stuff', e)
+		await ctx.send(f'`{data}`')
+		return True
+
+	@commands.command()
+	@checkPermissions('raffle')
+	@commands.guild_only()
+	@deleteMessage()
+	@doThumbs()
+	async def raffleimport(self, ctx, *, data):
+		itemDataPattern = re.compile('\^N(\d+)\^N(\d+\.?\d*)')
+		itemNamePattern = re.compile('<meta property="twitter:title" content="(.*?)">')
+		
+		itemData = itemDataPattern.findall(data)
+		if not itemData:
+			await ctx.send('I was unable to process that data')
+			return False
+
+		async with ctx.channel.typing():
+			dataToImport = [ ]
+			box = BoxIt()
+			box.setTitle('Trade-in Value')
+			for item in itemData:
+				itemPage = await fetchWebpage(self, f'https://www.wowhead.com/item={item[0]}')
+				itemName = itemNamePattern.search(itemPage)
+				itemName = html.unescape(itemName[1])
+				
+				dataToImport.append((item[0], item[1], itemName))
+				box.addRow([ itemName, item[0], item[1] ])
+			box.setHeader([ 'Item Name', 'Item ID', 'per Ticket' ])
+			message = await ctx.send('```' + box.box() + '\nReact with 👌 to delete old data and replace with this new stuff```')
+
+			def check(reaction, user):
+				return user == ctx.author and str(reaction.emoji) == '👌'
+
+			try:
+				reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+			except asyncio.TimeoutError:
+				await message.delete()
+			else:
+				try:
+					connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+					async with connection.cursor() as cursor:
+						sql = "DELETE FROM `raffleitems` WHERE `guildID`=%s"
+						await cursor.execute(sql, (ctx.guild.id))
+						await connection.commit()
+						for item in dataToImport:
+							sql = "INSERT INTO `raffleitems` (`guildID`, `itemName`, `itemID`, `tickets`) VALUES(%s, %s, %s, %s)"
+							await cursor.execute(sql, (ctx.guild.id, item[2], item[0], item[1]))
+						await connection.commit()
+						return True
+				except Exception as e:
+					await ctx.send(f'Error: {e}')
+				finally:
+					connection.close()
+
+	@commands.command()
 	@checkPermissions('raffle')
 	@commands.guild_only()
 	@deleteMessage()
@@ -293,7 +366,7 @@ class Raffle(commands.Cog):
 		help = 'Commands are:\nadd "item name" tickets\nedit id item|tickets\ndel id\nstop'
 		editMessage = await ctx.send(help)
 		def check(m):
-			return m.author == ctx.author 
+			return m.author == ctx.author and m.channel == ctx.channel
 		while(updateMode):
 			try:
 				async with ctx.channel.typing():
