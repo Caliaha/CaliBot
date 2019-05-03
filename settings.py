@@ -12,6 +12,7 @@ class Settings(commands.Cog):
 	@commands.guild_only()
 	@checkPermissions('set')
 	async def set(self, ctx, setting, value, member: discord.Member=None):
+		"""Set values for discord user"""
 		if setting not in self.settings:
 			await ctx.send('Usage: !set variable value [member]\nCurrently accepted variables: ' + ', '.join(self.settings))
 			return False
