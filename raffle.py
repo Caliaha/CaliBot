@@ -15,6 +15,7 @@ class Raffle(commands.Cog):
 		
 	@commands.command()
 	async def rafflehelp(self, ctx):
+		"""Shows help for raffle related commands"""
 		help = { }
 		help['!tickets [@member]'] = 'Lists amount of tickets member has'
 		help['!ticketlist'] = 'Lists tickets of all members in database'
@@ -37,6 +38,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def giveticket(self, ctx, member: discord.Member, value: int = 1):
+		"""Gives a member a ticket"""
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -63,6 +65,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def removetickets(self, ctx, member: discord.Member):
+		"""Removes tickets from members"""
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -80,6 +83,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def removealltickets(self, ctx):
+		"""Removes all tickets"""
 		message = await ctx.send('This will remove all tickets from all members of this guild and can not be undone, react with 👌 to confirm.')
 
 		def check(reaction, user):
@@ -106,6 +110,7 @@ class Raffle(commands.Cog):
 	@commands.command()
 	@doThumbs()
 	async def tickets(self, ctx, member: discord.Member=None):
+		"""Shows ticket count for member"""
 		if (member is None):
 			member = ctx.author
 
@@ -128,6 +133,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def draw(self, ctx, threshold: int = 1):
+		"""Selects a winner from ticket holders"""
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -165,6 +171,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def odds(self, ctx, threshold: int = 1):
+		"""Calculate and show current odds"""
 		try:
 			async with ctx.channel.typing():
 				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
@@ -210,6 +217,7 @@ class Raffle(commands.Cog):
 	@commands.guild_only()
 	@doThumbs()
 	async def ticketlist(self, ctx):
+		"""Shows all ticket holders"""
 		try:
 			async with ctx.channel.typing():
 				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
