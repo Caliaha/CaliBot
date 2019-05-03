@@ -67,7 +67,7 @@ class utils(commands.Cog):
 		
 		return images
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@doThumbs()
 	async def renderpage(self, ctx, url: str):
 		images = await self.bot.loop.run_in_executor(None, self.convertwebpagetopdf, url)
@@ -76,7 +76,7 @@ class utils(commands.Cog):
 		
 		
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
 	async def load(self, ctx, extension_name : str):
@@ -89,7 +89,7 @@ class utils(commands.Cog):
 		await ctx.send("{} loaded.".format(extension_name))
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
 	async def unload(self, ctx, extension_name : str):
@@ -98,7 +98,7 @@ class utils(commands.Cog):
 		await ctx.send("{} unloaded.".format(extension_name))
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
 	async def reload(self, ctx, extension_name : str):
@@ -179,21 +179,10 @@ class utils(commands.Cog):
 					connection.commit()
 		finally:
 			connection.close()
-	
-	@commands.command()
-	async def addons(self, ctx):
-		embed=discord.Embed(
-			title = 'Mandatory Raiding Addons',
-			description = "[Deadly Boss Mods](https://www.curseforge.com/wow/addons/deadly-boss-mods)\n[Personal Loot Helper](https://www.curseforge.com/wow/addons/personal-loot-helper)\n[GTFO](https://www.curseforge.com/wow/addons/gtfo)",
-			color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
-		embed.set_thumbnail(url='https://i.imgur.com/LgGVtXz.png')
-		try:
-			await ctx.send(embed=embed)
-		except:
-			pass
 
 	@commands.command()
 	async def text2number(self, ctx, *, text):
+		"""Makes text hard to read"""
 		table = str.maketrans('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', '⓪①②③④⑤⑥⑦⑧⑨ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ')
 		await ctx.send(text.translate(table))
 
