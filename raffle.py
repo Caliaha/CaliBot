@@ -379,7 +379,7 @@ class Raffle(commands.Cog):
 						box = BoxIt()
 						box.setTitle('Trade-in Value')
 						for result in results:
-							box.addRow([ int(result['id']), result['itemName'], int(result['tickets']) ])
+							box.addRow([ int(result['id']), result['itemName'], result['tickets'] ])
 
 						box.setHeader([ 'ID', 'Item', 'Tickets' ])
 						await editMessage.edit(content=f'```{box.box()}\n{help}```')
