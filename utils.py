@@ -154,11 +154,20 @@ class utils(commands.Cog):
 	@commands.command(hidden=True)
 	@superuser()
 	@commands.guild_only()
-	async def reactions(self, ctx, channelID: int, messageID: int):
-		channel = ctx.guild.get_channel(channelID)
+	async def reactions(self, ctx, channelID: int, messageID: int, guildID: int = 0):
+		if guildID:
+			guild = self.bot.get_guild(guildID)
+		else:
+			guild = ctx.guild
+		
+		channel = guild.get_channel(channelID)
 		message = await channel.fetch_message(messageID)
-		#reactions = await message.reaction.users().flatten()
-		print(message.reactions)
+		data = ''
+		for reaction in message.reactions:
+			users = await reaction.users().flatten()
+			for user in users:
+				data = f'{data}{reaction}:{user.name}#{user.discriminator}\n'
+		await ctx.send(data)
 		
 
 	@commands.command()
