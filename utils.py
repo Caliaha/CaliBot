@@ -115,7 +115,7 @@ class utils(commands.Cog):
 	@commands.command(hidden=True)
 	@isBotOwner()
 	@doThumbs()
-	async def dm(self, ctx, messageID: int, channelID = None, guildID = None):
+	async def dma(self, ctx, messageID: int, channelID = None, guildID = None):
 		try:
 			if (guildID):
 				guild = self.bot.get_guild(int(guildID))
@@ -150,6 +150,16 @@ class utils(commands.Cog):
 	@commands.guild_only()
 	async def purge(self, ctx, amount: int = 10):
 		await ctx.channel.delete_messages(await ctx.channel.history(limit=amount).flatten())
+
+	@commands.command(hidden=True)
+	@superuser()
+	@commands.guild_only()
+	async def reactions(self, ctx, channelID: int, messageID: int):
+		channel = ctx.guild.get_channel(channelID)
+		message = await channel.fetch_message(messageID)
+		#reactions = await message.reaction.users().flatten()
+		print(message.reactions)
+		
 
 	@commands.command()
 	@deleteMessage()
