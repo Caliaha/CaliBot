@@ -11,6 +11,33 @@ class Settings(commands.Cog):
 	@commands.command()
 	@commands.guild_only()
 	@checkPermissions('set')
+	async def phone(self, ctx, value, member: discord.Member = None):
+		"""!phone \"TEXT\" @Member"""
+		if member is None:
+			member = ctx.author
+		if value is "":
+			value = None
+		try:
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "SELECT `phonetic` FROM `usersettings` WHERE `discordID`=%s"
+				cursor.execute(sql, (member.id))
+				result = cursor.fetchone()
+				if result is None:
+					sql = "INSERT INTO `usersettings` (`discordID`, `phonetic`) VALUES(%s, %s)"
+					cursor.execute(sql, (member.id, value))
+					connection.commit()
+				else:
+					sql = "UPDATE `usersettings` SET `phonetic` = %s WHERE `discordID` = %s LIMIT 1"
+					cursor.execute(sql, (value, member.id))
+					connection.commit()
+				await ctx.send('Phonetic has been set to **' + str(value) + '** for ' + (member.nick or member.name))
+		finally:
+			connection.close()
+
+	@commands.command()
+	@commands.guild_only()
+	@checkPermissions('set')
 	async def set(self, ctx, setting, value, member: discord.Member=None):
 		"""Set values for discord user"""
 		if setting not in self.settings:
