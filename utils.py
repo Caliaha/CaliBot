@@ -41,7 +41,7 @@ class utils(commands.Cog):
 		return True
 
 	@commands.command(hidden=True)
-	@superuser()
+	@commands.has_permissions(manage_guild=True)
 	@commands.guild_only()
 	@doThumbs()
 	async def hop(self, ctx, region: str = None):
@@ -63,7 +63,7 @@ class utils(commands.Cog):
 		try:
 			await ctx.guild.edit(region=region)
 		except Exception as e:
-			await ctx.send('Could not change regions: {e}')
+			await ctx.send(f'Could not change regions: {e}')
 			return False
 		await ctx.send(f'Setting guild region to {region}')
 		return True
