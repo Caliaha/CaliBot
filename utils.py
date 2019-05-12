@@ -5,6 +5,7 @@ from io import BytesIO
 from pdf2image import convert_from_path, convert_from_bytes
 import pdfkit
 import pymysql.cursors
+import secrets
 from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser
 import sys
 import time
@@ -37,6 +38,34 @@ class utils(commands.Cog):
 	async def guildowner(self, ctx):
 		"""Shows guild owner"""
 		await ctx.send(ctx.message.guild.owner)
+		return True
+
+	@commands.command(hidden=True)
+	@superuser()
+	@commands.guild_only()
+	@doThumbs()
+	async def hop(self, ctx, region: str = None):
+		"""Changes guild region"""
+		regions = [ 'japan', 'singapore', 'eu-central', 'india', 'us-central', 'london', 'eu-west', 'amsterdam', 'brazil', 'us-west', 'hongkong', 'us-south', 'southafrica', 'us-east', 'sydney', 'frankfurt', 'russia' ]
+		prefRegions = [ 'us-south', 'us-east' ]
+		if region is not None and region not in regions:
+			await ctx.send(f'Not a valid region!\nValid regions are: {", ".join(regions)}')
+			return False
+		
+		if region is None:
+			currentRegion = ctx.guild.region
+			try:
+				prefRegions.remove(str(currentRegion))
+			except:
+				print(f'{currentRegion} not in preferred regions')
+			region = secrets.choice(prefRegions)
+		
+		try:
+			await ctx.guild.edit(region=region)
+		except Exception as e:
+			await ctx.send('Could not change regions: {e}')
+			return False
+		await ctx.send(f'Setting guild region to {region}')
 		return True
 
 	@commands.command()
