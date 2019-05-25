@@ -98,6 +98,7 @@ class WoW(commands.Cog):
 		if self.accessToken == None or self.accessTokenExpiration == None or self.accessTokenExpiration < time.time():
 			print('Token was None or expired, getting new one')
 			await self.getAccessToken()
+		return self.accessToken
 
 	async def getWarcraftLogsGuildID(self, guild, realm):
 		print('getWarcraftLogsGuildID', guild, realm)
@@ -255,6 +256,7 @@ class WoW(commands.Cog):
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			rawJSON = await fetchWebpage(self, 'https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
+			print('https://raider.io/api/search?term=' + urllib.parse.quote_plus(guild))
 		except:
 			return False
 
@@ -262,7 +264,7 @@ class WoW(commands.Cog):
 		guildData = None
 		try:
 			for guildJSON in guilds['matches']:
-				if guildJSON['type'] == 'guild' and guildJSON['data']['realm']['name'].lower() == realm.lower() and guildJSON['data']['name'].lower() == guild.lower():
+				if guildJSON['type'] == 'guild' and (guildJSON['data']['realm']['name'].lower() == realm.lower() or guildJSON['data']['realm']['slug'].lower() == realm.lower() or guildJSON['data']['realm']['altSlug'].lower() == realm.lower()) and guildJSON['data']['name'].lower() == guild.lower():
 					guild = guildJSON['data']['name']
 					realm = guildJSON['data']['realm']['slug']
 					guildData = guildJSON
@@ -272,12 +274,13 @@ class WoW(commands.Cog):
 			return False
 		
 		if guildData is None:
+			print('guildData was none')
 			return False
 
 		fullWaitWarning = ''
 		if fullWait:
 			fullWaitWarning = 'I have been requested to wait out the full duration of the queue, this may cause problems!\n'
-
+		print('beep')
 		embed=discord.Embed(
 			title='Requesting raider.io update for {}'.format(guild, realm.capitalize()),
 			url='https://raider.io/guilds/us/{}/{}/roster#mode=mythic_plus'.format(urllib.parse.quote(realm), urllib.parse.quote(guild)),
@@ -342,7 +345,7 @@ class WoW(commands.Cog):
 			await message.delete()
 		except:
 			pass
-		return True
+		return True, guild, realm
 
 	@commands.command()
 	@deleteMessage()
@@ -1589,21 +1592,56 @@ class WoW(commands.Cog):
 	async def prog(self, ctx, *args):
 		"""Shows raider.io guild raid progression"""
 		
+		validArguments = { '-g': 'guild', '-s': 'realm', '-t': 'threshold', '-f': 'fullWait' }
+		arguments = { }
+
+		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
+			await ctx.send('Usage: !prog -g "guild name" -s "realm name"')
+			return True
+		
+		for i in range(len(args)):
+			if args[i] in validArguments:
+				if i+1 < len(args):
+					arguments[validArguments[args[i]]] = args[i+1]
+				else:
+					arguments[validArguments[args[i]]] = True
+
+		try:
+			guild = arguments['guild']
+		except:
+			guild = False
+		try:
+			realm = arguments['realm']
+		except:
+			realm = "Cairne"
+			
+		if not guild:
+			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
+
+		if not (guild, realm):
+				return False
 		region = 'us'
 		raids = [ 'battle-of-dazaralor', 'uldir' ]
 		difficulties = [ 'normal', 'heroic', 'mythic' ]
 		raidProper = { 'battle-of-dazaralor': 'Battle of Dazaralor', 'uldir': 'Uldir' }
+		
+		try:
+			updateableMessage
+		except:
+			updateableMessage = await ctx.send('Looking up stuff')
+		
 		async with ctx.channel.typing():
-			guild, realm, updateableMessage = await self.fetchGuildFromDB(ctx)
-			
-			if not (guild, realm):
-				return False
 			await self.updateRaiderIO(guild, realm, updateableMessage)
+			try:
+				pass
+				#await updateableMessage.delete()
+			except:
+				pass
 			try:
 				guildJSON = await fetchWebpage(self, f'https://raider.io/api/v1/guilds/profile?region={region}&realm={urllib.parse.quote(realm)}&name={urllib.parse.quote(guild)}&fields=raid_progression%2Craid_rankings')
 				guildData = json.loads(guildJSON)
 			except Exception as e:
-				await ctx.send('Failed to fetch webpage or parse json', e)
+				await ctx.send('Failed to fetch webpage or parse json {e}')
 				return False
 
 			embed=discord.Embed(
