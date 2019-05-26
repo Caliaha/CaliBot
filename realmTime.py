@@ -20,7 +20,7 @@ class realmTime(commands.Cog):
 	@tasks.loop(seconds=3.0)
 	async def updateLoop(self):
 		#activeThings = [ [ 'cairne', 0, 'status'  ], [ 'tichondrius', 581932082192711697, 'category' ], [ 'alterac-mountains', 493512483273965568, 'category' ], [ 'perenolde', 493512483273965568, 'topic' ] ]
-		activeThings = [ [ 'cairne', 0, 'status' ], [ 'cairne', 254746234466729987, 'topic' ], [ 'cairne', 581932082192711697, 'category' ] ]
+		activeThings = [ [ 'cairne', 0, 'status' ], [ 'cairne', 254746234466729987, 'topic' ] ]
 		#activeChannels = { 'cairne': 581932082192711697 }
 		#for realmName, categoryID in activeChannels.items():
 		for thing in activeThings:
@@ -35,7 +35,10 @@ class realmTime(commands.Cog):
 			if type == "status":
 				if self.lastPresence != f'{realm}: {currentTime}':
 					self.lastPresence = f'{realm}: {currentTime}'
-					await self.bot.change_presence(activity=discord.Game(name=self.lastPresence))
+					try:
+						await self.bot.change_presence(activity=discord.Game(name=self.lastPresence))
+					except:
+						print('Failed to update status')
 					
 			if type == 'topic':
 				category = self.bot.get_channel(id)
@@ -58,6 +61,10 @@ class realmTime(commands.Cog):
 								print('Failed to update channel', category.name)
 						else:
 							print('I don\'t have the proper permissions for that')
+
+	@updateLoop.before_loop
+	async def before_updateLoop(self):
+		await self.bot.wait_until_ready()
 	
 	async def fetchRealmTZData(self, realm):
 		wow = self.bot.get_cog('WoW')
