@@ -89,5 +89,17 @@ class realmTime(commands.Cog):
 
 			return datetime.now(timezone(self.realmTZCache[realm])).strftime('%I:%M %p')
 
+	@commands.command()
+	@doThumbs()
+	async def realmtime(self, ctx, realm):
+		if realm in self.realmNameCache:
+				realm = self.realmNameCache[realm]
+		currentTime = await self.fetchRealmTime(realm)
+		try:
+			await ctx.send(f'It is currently {currentTime} on {realm}.')
+		except:
+			return False
+		return True
+
 def setup(bot):
 	bot.add_cog(realmTime(bot))
