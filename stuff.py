@@ -381,13 +381,13 @@ async def postWebdata(self, url, data):
 			attempts += 1
 	raise ValueError('Unable to fetch url')
 
-async def sendBigMessage(self, ctx, message):
+async def sendBigMessage(self, ctx, message, prefix='', postfix=''):
 	lines = message.splitlines(True)
-	newMessage = '```'
+	newMessage = prefix
 	for line in lines:
 		if len(newMessage + line) > 1995:
-			await ctx.send(newMessage + '```')
-			newMessage = '```'
+			await ctx.send(newMessage + postfix)
+			newMessage = prefix
 		newMessage += line
 	if newMessage != '':
-		await ctx.send(newMessage + '```')
+		await ctx.send(newMessage + postfix)
