@@ -31,7 +31,7 @@ class Raffle(commands.Cog):
 			helpBox.addRow([ h, help[h] ])
 		
 		helpBox.setHeader([ 'Command', 'Description' ])
-		await sendBigMessage(self, ctx, helpBox.box())
+		await sendBigMessage(self, ctx, helpBox.box(), '```', '```')
 
 	@commands.command()
 	@checkPermissions('raffle')
@@ -170,15 +170,17 @@ class Raffle(commands.Cog):
 	@commands.command()
 	@commands.guild_only()
 	@doThumbs()
-	async def odds(self, ctx, threshold: int = 1):
+	async def odds(self, ctx, testIterations: int = 10000, threshold: int = 1):
 		"""Calculate and show current odds"""
+		if testIterations > 10000000:
+			ctx.send("I'm old, try a more reasonable number")
+			return False
 		try:
 			async with ctx.channel.typing():
 				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
 				async with connection.cursor() as cursor:
 					winners = { }
 					tickets = { }
-					testIterations = 10000
 					for j in range(testIterations):
 						sql = "SELECT `discordID`, `tickets` FROM `raffle` WHERE `guildID`=%s"
 						await cursor.execute(sql, (ctx.guild.id))
@@ -243,7 +245,7 @@ class Raffle(commands.Cog):
 			connection.close()
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@commands.guild_only()
 	@doThumbs()
 	async def rafflelist(self, ctx):
@@ -266,7 +268,7 @@ class Raffle(commands.Cog):
 			connection.close()
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@checkPermissions('raffle')
 	@commands.guild_only()
 	@doThumbs()
@@ -291,7 +293,7 @@ class Raffle(commands.Cog):
 		finally:
 			connection.close()
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@commands.guild_only()
 	@deleteMessage()
 	@doThumbs()
@@ -312,7 +314,7 @@ class Raffle(commands.Cog):
 		await ctx.send(f'`{data}`')
 		return True
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@checkPermissions('raffle')
 	@commands.guild_only()
 	@deleteMessage()
@@ -364,7 +366,7 @@ class Raffle(commands.Cog):
 				finally:
 					connection.close()
 
-	@commands.command()
+	@commands.command(hidden=True)
 	@checkPermissions('raffle')
 	@commands.guild_only()
 	@deleteMessage()
