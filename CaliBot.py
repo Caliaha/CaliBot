@@ -2,7 +2,6 @@
 import config
 import discord
 from discord.ext import commands
-from stuff import isBotOwner
 import sys
 import time
 
@@ -27,7 +26,7 @@ bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
 
-startup_extensions = [ 'announce', 'color', 'permissions', 'maplestory', 'raffle', 'settings', 'utils', 'wow', 'wowhead', 'wowtoken' ]
+startup_extensions = [ 'announce', 'color', 'permissions', 'maplestory', 'raffle', 'settings', 'utils', 'wow', 'wowhead', 'realmTime', 'monsterhunter' ]
 
 @bot.event
 async def on_ready():
