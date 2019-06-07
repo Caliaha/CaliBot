@@ -1,13 +1,46 @@
 import datetime
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 import re
 from stuff import BoxIt, deleteMessage, doThumbs, superuser, fetchWebpage, postWebdata
 
 class MHW(commands.Cog):
+	"""Posts latest Monster Hunter World Events"""
 	def __init__(self, bot):
 		self.bot = bot
 		self.MHW_EVENTS_URL = 'http://game.capcom.com/world/steam/us/schedule.html?utc=-4'
+		self.guilds = { } #activeEvents, existingPosts: List of events currently on website as available, currently existing posts
+		self.updateLoop.start()
+
+	def cog_unload(self):
+		self.updateLoop.cancel()
+
+	@commands.command(hidden=True)
+	async def mhwtest(self, ctx):
+		try:
+			await ctx.send(f'{", ".join(self.guilds[ctx.guild]["activeEvents"])}\n{", ".join(self.guilds[ctx.guild]["existingPosts"])}')
+		except Exception as e:
+			print('mhwtest', e)
+
+	async def purgeOldEvents(self):
+		"""Should remove any previously posted event that is no longer active"""
+		for guild in self.guilds:
+			for channel in guild.text_channels:
+				if channel.name == 'mhw-events':
+					async for message in channel.history():
+						if message.author != guild.me:
+							continue
+						for embed in message.embeds:
+							if embed.title not in self.guilds[guild]['existingPosts']:
+								self.guilds[guild]['existingPosts'].append(embed.title)
+							if self.guilds[guild]['activeEvents'] and embed.title not in self.guilds[guild]['activeEvents']:
+								try:
+									self.guilds[guild]['existingPosts'].remove(embed.title)
+									print('Deleting old event', embed.title)
+									await message.delete()
+								except Exception as e:
+									print('purgeOldEvents', e)
+			
 
 	def unescape(self, text):
 		text = text.replace('&#039;', "'")
@@ -15,11 +48,16 @@ class MHW(commands.Cog):
 
 		return text
 
-	@commands.command()
-	async def events(self, ctx):
-		eventsPage = await fetchWebpage(self, self.MHW_EVENTS_URL)
+	
+	@tasks.loop(minutes=10.0)
+	async def updateLoop(self):
+		await self.purgeOldEvents()
+		try:
+			eventsPage = await fetchWebpage(self, self.MHW_EVENTS_URL)
+		except:
+			print('Unable to fetch mhw events page')
+			return
 		eventRegex = re.compile('<tr class=".*?">(.*?)</tr>', re.DOTALL)
-		
 		titleRegex = re.compile('<div class="title"><span>(.*?)</span>')
 		imageRegex = re.compile('<td class="image"> <img src ="(.*?)" />')
 		levelRegex = re.compile('<td class="level"><span>(.*?)</span></td>')
@@ -27,8 +65,7 @@ class MHW(commands.Cog):
 		locationRegex = re.compile('<li>Locale: <span>(.*?)<span></li>')
 		requirementsRegex = re.compile('<li>Requirements: <span> (.*?) </span></li>')
 		availabilityRegex = re.compile('<p class="txt"> Available <span>(\d+)/(\d+) (\d+):(\d+)<br>〜<br>(\d+)/(\d+) (\d+):(\d+)</span>')
-		
-		
+
 		now = datetime.datetime.now()
 		for eventRaw in eventRegex.findall(eventsPage):
 			event = ' '.join(eventRaw.split())
@@ -37,10 +74,11 @@ class MHW(commands.Cog):
 			if availabilityMatch:
 				availabilityStart = datetime.datetime(2019, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
 				availabilityEnd = datetime.datetime(2019, int(availabilityMatch[5]), int(availabilityMatch[6]), int(availabilityMatch[7]), int(availabilityMatch[8]))
-				if availabilityStart <= now <= availabilityEnd:
-					print('Event is available')
-				else:
+				if not (availabilityStart <= now <= availabilityEnd):
 					continue
+			else:
+				print('Couldn\'t find availability dates, skipping')
+				continue
 
 			title = titleRegex.search(event)
 			image = imageRegex.search(event)
@@ -49,25 +87,50 @@ class MHW(commands.Cog):
 			location = locationRegex.search(event)
 			requirements = requirementsRegex.search(event)
 			
+			if not title:
+				print('mhw, title not found, skipping')
+				continue
+			
 			embed=discord.Embed(
 				title = self.unescape(title[1]),
 				description = '',
 				url = self.MHW_EVENTS_URL,
 				color = discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 			
-			embed.set_footer(text=f'Available {availabilityStart} ~ {availabilityEnd}')
+			if availabilityStart and availabilityEnd:
+				embed.set_footer(text=f'Available {availabilityStart} ~ {availabilityEnd}')
 			
 			if description:
 				embed.description = self.unescape(description[1] + (f'\n{description[2]}' if description[2] else ''))
 			if image:
 				embed.set_image(url=image[1])
-			embed.add_field(
-				name = 'Quest Details',
-				value = f'```Level: {level[1]}\nLocation: {location[1]}\nRequirements: {requirements[1]}```',
-				inline = False)
-			await ctx.send(embed=embed)
-			#return
-			#await ctx.send(' '.join(event.split()))
+			if level and location and requirements:
+				embed.add_field(
+					name = 'Quest Details',
+					value = f'```Level: {self.unescape(level[1])}\nLocation: {self.unescape(location[1])}\nRequirements: {self.unescape(requirements[1])}```',
+					inline = False)
+			for guild in self.guilds:
+				if embed.title not in self.guilds[guild]['existingPosts']:
+					try:
+						await self.guilds[guild]['channel'].send(embed=embed)
+					except Exception as e:
+						print('Error posting mhw event', e)
+					finally:
+						self.guilds[guild]['existingPosts'].append(embed.title)
+				self.guilds[guild]['activeEvents'].append(embed.title)
+
+	@updateLoop.before_loop
+	async def before_updateLoop(self):
+		await self.bot.wait_until_ready()
+		guild = self.bot.get_guild(254746234466729987)
+		for channel in guild.text_channels:
+			if channel.name == 'mhw-events':
+				print(f'Will manage {channel.name} for {guild.name}')
+				self.guilds[guild] = {
+					'activeEvents': [ ],
+					'existingPosts': [ ],
+					'channel': channel,
+				}
 
 def setup(bot):
 	bot.add_cog(MHW(bot))
