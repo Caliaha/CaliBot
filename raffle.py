@@ -210,7 +210,7 @@ class Raffle(commands.Cog):
 						box.addRow([ ctx.guild.get_member(int(winner)), tickets[winner], winners[winner], round((winners[winner] / testIterations) * 100, 2) ])
 					box.sort(2, True)
 					box.setHeader([ 'Name', 'Tickets', 'Win Counts', 'Win Percentage' ])
-					await sendBigMessage(self, ctx, box.box())
+					await sendBigMessage(self, ctx, box.box(), '```', '```')
 		finally:
 			connection.close()
 		return True
@@ -240,7 +240,7 @@ class Raffle(commands.Cog):
 					box.sort(1, True)
 					box.setHeader([ 'Name', 'Tickets' ])
 					box.setFooter([ f'{totalHolders} entrees', f'{totalTickets} tickets' ])
-					await sendBigMessage(self, ctx, box.box())
+					await sendBigMessage(self, ctx, box.box(), '```', '```')
 		finally:
 			connection.close()
 		return True
@@ -263,7 +263,7 @@ class Raffle(commands.Cog):
 						box.addRow([ result['itemName'], result['tickets'] ])
 
 					box.setHeader([ 'Item', 'Trade-in Value' ])
-					await sendBigMessage(self, ctx, box.box())
+					await sendBigMessage(self, ctx, box.box(), '```', '```')
 		finally:
 			connection.close()
 		return True
