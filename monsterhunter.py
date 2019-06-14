@@ -2,7 +2,7 @@ import datetime
 import discord
 from discord.ext import tasks, commands
 import re
-from stuff import BoxIt, deleteMessage, doThumbs, superuser, fetchWebpage, postWebdata
+from stuff import BoxIt, deleteMessage, doThumbs, superuser, fetchWebpage, postWebdata, sendBigMessage
 
 class MHW(commands.Cog):
 	"""Posts latest Monster Hunter World Events"""
@@ -51,7 +51,8 @@ class MHW(commands.Cog):
 	
 	@tasks.loop(minutes=10.0)
 	async def updateLoop(self):
-		await self.purgeOldEvents()
+		for guild in self.guilds: # We delete posts that aren't in here so need to empty it out occasionally
+				self.guilds[guild]['activeEvents'].clear()
 		try:
 			eventsPage = await fetchWebpage(self, self.MHW_EVENTS_URL)
 		except:
@@ -117,7 +118,9 @@ class MHW(commands.Cog):
 						print('Error posting mhw event', e)
 					finally:
 						self.guilds[guild]['existingPosts'].append(embed.title)
-				self.guilds[guild]['activeEvents'].append(embed.title)
+				if embed.title not in self.guilds[guild]['activeEvents']:
+					self.guilds[guild]['activeEvents'].append(embed.title)
+		await self.purgeOldEvents()
 
 	@updateLoop.before_loop
 	async def before_updateLoop(self):
