@@ -102,8 +102,6 @@ class utils(commands.Cog):
 		images = await self.bot.loop.run_in_executor(None, self.convertwebpagetopdf, url)
 		for image in images:
 			await ctx.send(file=discord.File(image, 'file.png'))
-		
-		
 
 	@commands.command(hidden=True)
 	@isBotOwner()
