@@ -87,7 +87,8 @@ class Raffle(commands.Cog):
 		message = await ctx.send('This will remove all tickets from all members of this guild and can not be undone, react with 👌 to confirm.')
 
 		def check(reaction, user):
-			return user == ctx.author and str(reaction.emoji) == '👌'
+			okhand_emojies = [ '👌', '👌🏻', '👌🏽', '👌🏾', '👌🏿' ]
+			return user == ctx.author and str(reaction.emoji) in okhand_emojies
 
 		try:
 			reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
