@@ -18,7 +18,7 @@ class MHW(commands.Cog):
 	@commands.command(hidden=True)
 	async def mhwtest(self, ctx):
 		try:
-			await ctx.send(f'{", ".join(self.guilds[ctx.guild]["activeEvents"])}\n{", ".join(self.guilds[ctx.guild]["existingPosts"])}')
+			await sendBigMessage(self, ctx, f'{", ".join(self.guilds[ctx.guild]["activeEvents"])}\n{", ".join(self.guilds[ctx.guild]["existingPosts"])}')
 		except Exception as e:
 			print('mhwtest', e)
 
@@ -45,12 +45,14 @@ class MHW(commands.Cog):
 	def unescape(self, text):
 		text = text.replace('&#039;', "'")
 		text = text.replace('<br />', '')
+		text = text.replace('&amp;', '&') 
 
 		return text
 
 	
 	@tasks.loop(minutes=10.0)
 	async def updateLoop(self):
+		await self.purgeOldEvents()
 		for guild in self.guilds: # We delete posts that aren't in here so need to empty it out occasionally
 				self.guilds[guild]['activeEvents'].clear()
 		try:
@@ -120,7 +122,6 @@ class MHW(commands.Cog):
 						self.guilds[guild]['existingPosts'].append(embed.title)
 				if embed.title not in self.guilds[guild]['activeEvents']:
 					self.guilds[guild]['activeEvents'].append(embed.title)
-		await self.purgeOldEvents()
 
 	@updateLoop.before_loop
 	async def before_updateLoop(self):
