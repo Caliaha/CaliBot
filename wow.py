@@ -486,7 +486,7 @@ class WoW(commands.Cog):
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			#print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
-			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-2&class=all&role=all&page=0')
+			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-2-post&class=all&role=all&page=0')
 			#rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
@@ -502,7 +502,9 @@ class WoW(commands.Cog):
 		
 		box = BoxIt()
 		box.setTitle('Mythic+ Scores for ' + guild)
+		didSomething = False
 		for character in roster['rankings']['rankedCharacters']:
+			didSomething = True
 			#print(character['character']['name'], character['character']['spec']['name'], character['rank'], character['score'])
 			if float(character['score']) >= threshold:
 				box.addRow([ character['character']['name'], character['character']['spec']['name'], float('{0:.2f}'.format(character['score'])) ])
@@ -516,6 +518,8 @@ class WoW(commands.Cog):
 		box.setHeader( ['Name', 'Spec', 'Mythic+ Score' ] ) # FIX ME Shouldn't have to put header after the sort
 		message = '```' + box.box()
 		
+		if not didSomething:
+			message = f'```No data found for {guild}\nThis is either an error or a new mythic+ season has started and no runs have been completed yet.'
 		#embed=discord.Embed(title='Mythic+', description='SOmething', url='https://raider.io/guilds/us/' +  urllib.parse.quote(realm) + '/' + urllib.parse.quote(guild) + '/roster#mode=mythic_plus', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16))) Maybe for later
 
 		if message:
