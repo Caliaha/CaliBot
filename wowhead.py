@@ -125,7 +125,7 @@ class WowHead(commands.Cog):
 		def fetchAchievementName(match):
 			url = 'http://www.wowhead.com/achievement={}'.format(match.group(1))
 			try:
-				page = urllib.request.urlopen(url).read().decode('utf-8') # Not using async here because it's easier lol
+				page = urllib.request.urlopen(url).read().decode('utf-8') # Not using async here because it's easier lol FIX ME
 				achievementPattern = re.compile('<meta property=\"og\:title\" content=\"(.*?)\">')
 				achievement = achievementPattern.search(page)
 				name = achievement[1]
@@ -138,6 +138,7 @@ class WowHead(commands.Cog):
 		text = text.replace('\\u201c', '“')
 		text = text.replace('\\u201d', '”')
 		text = text.replace('\\u00e9', 'é')
+		text = text.replace('\\u2014', '—')
 
 		if type == 'bb':
 			text = text.replace('[b]', '**')
@@ -154,6 +155,22 @@ class WowHead(commands.Cog):
 			text = re.sub(r'\\r\\n', '\n', text)
 		
 		if type == 'html':
+			#print('Beep')
+			#rint(text)
+			#return
+			twitchPattern = re.compile('&lt;iframe src="https:\\\/\\\/player\.twitch\.tv\\\/.*?channel=(.*?)"')
+			twitchFound = twitchPattern.search(text)
+			twitchWholePattern  = re.compile('&lt;iframe src=.*?www\.twitch\.tv&lt;</a>\\\/a&gt;', re.DOTALL)
+			twitchWholeFound = twitchWholePattern.search(text)
+			if twitchFound:
+				print('Found twitch link')
+				text = re.sub(twitchWholePattern, f'[Watch {twitchFound[1]} live on twitch.](https://www.twitch.tv/{twitchFound[1]})', text)
+				print(f'[Watch {twitchFound[1]} live on twitch.](https://www.twitch.tv/{twitchFound[1]})')
+				#[{}]({})'.format(name, url)
+			if twitchWholeFound:
+				print('TwitchWHOLE')
+				
+			#&lt;iframe src=&quot;https:\\\/\\\/player\.twitch\.tv\\\/.*?channel=(.*?)&quot;
 			#print('Start', text)
 			text = text.replace('\"', '"')
 			text = text.replace('\\\\', '\\')
