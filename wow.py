@@ -486,7 +486,7 @@ class WoW(commands.Cog):
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
 			#print(realm ,guild, 'https://raider.io/api/guilds/us/' + urllib.parse.quote_plus(realm) + '/' + urllib.parse.quote_plus(guild) + '/roster')
-			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-2-post&class=all&role=all&page=0')
+			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-3&class=all&role=all&page=0')
 			#rawJSON = await fetchWebpage(self, 'https://raider.io/api/guilds/us/' + realm + '/' + guild + '/roster')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
