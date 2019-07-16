@@ -58,7 +58,7 @@ class WowHead(commands.Cog):
 								
 								if (linkMatch):
 									#print(linkMatch[1])
-									#print('Added image', linkMatch[1])
+									print('Added image', linkMatch[1])
 									embed.set_image(url=linkMatch[1]) #url='http://' +
 						if 'news-post-type' in a.get('class'):
 							if (a.text):
@@ -158,7 +158,7 @@ class WowHead(commands.Cog):
 			#print('Beep')
 			#rint(text)
 			#return
-			twitchPattern = re.compile('&lt;iframe src="https:\\\/\\\/player\.twitch\.tv\\\/.*?channel=(.*?)"')
+			twitchPattern = re.compile('&lt;iframe src="https:\\\/\\\/player\.twitch\.tv\\\/.*?channel=(.*?)(&amp;autoplay=false)?"')
 			twitchFound = twitchPattern.search(text)
 			twitchWholePattern  = re.compile('&lt;iframe src=.*?www\.twitch\.tv&lt;</a>\\\/a&gt;', re.DOTALL)
 			twitchWholeFound = twitchWholePattern.search(text)
