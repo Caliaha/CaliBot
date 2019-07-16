@@ -201,13 +201,18 @@ class WoW(commands.Cog):
 		mythicAffixes['Relentless'] = 'Non-boss enemies are granted temporary immunity to Loss of Control effects.'
 		mythicAffixes['Infested'] = 'Some non-boss enemies have been infested with a Spawn of G\'huun.'
 		mythicAffixes['Reaping'] = 'Non-boss enemies are empowered by Bwonsamdi and periodically seek vengeance from beyond the grave.'
+		mythicAffixes['Beguiling'] = 'Azshara\'s Emissaries are present throughout the dungeon.'
  
 		embed=discord.Embed(title='Mythic+ Affixes', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 
 		affixesP = re.compile('<a href="(/affix=.*?)" id="US-mythicaffix-\d" class="icontiny"><img src=".*?"> (.*?)</a>')
 		foundAffixes = False
 		for affix in affixesP.findall(wowheadData):
-			embed.add_field(name=affix[1], value=mythicAffixes[affix[1]])
+			try:
+				affixDescription = mythicAffixes[affix[1]]
+			except:
+				affixDescription = 'Unknown'
+			embed.add_field(name=affix[1], value=affixDescription)
 			foundAffixes = True
 
 		if not foundAffixes:
