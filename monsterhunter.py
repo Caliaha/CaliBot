@@ -68,18 +68,32 @@ class MHW(commands.Cog):
 		locationRegex = re.compile('<li>Locale: <span>(.*?)<span></li>')
 		requirementsRegex = re.compile('<li>Requirements: <span> (.*?) </span></li>')
 		availabilityRegex = re.compile('<p class="txt"> Available <span>(\d+)/(\d+) (\d+):(\d+)<br>〜<br>(\d+)/(\d+) (\d+):(\d+)</span>')
+		availabilityRegex2 = re.compile('<p class="terms"><span>Availability</span> (\d+)-(\d+) (\d+):(\d+) 〜 (\d+)-(\d+) (\d+):(\d+)<br> </p>')
+
+
 
 		now = datetime.datetime.now()
 		for eventRaw in eventRegex.findall(eventsPage):
 			event = ' '.join(eventRaw.split())
 			#print(' '.join(event.split()))
 			availabilityMatch = availabilityRegex.search(event)
+			availabilityMatch2 = availabilityRegex2.search(event)
 			if availabilityMatch:
+				#print('availabilityMatch')
 				availabilityStart = datetime.datetime(2019, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
 				availabilityEnd = datetime.datetime(2019, int(availabilityMatch[5]), int(availabilityMatch[6]), int(availabilityMatch[7]), int(availabilityMatch[8]))
 				if not (availabilityStart <= now <= availabilityEnd):
+					#print(availabilityStart, now, availabilityEnd)
+					continue
+			elif availabilityMatch2:
+				#print('availabilityMatch2')
+				availabilityStart = datetime.datetime(2019, int(availabilityMatch2[1]), int(availabilityMatch2[2]), int(availabilityMatch2[3]), int(availabilityMatch2[4]))
+				availabilityEnd = datetime.datetime(2019, int(availabilityMatch2[5]), int(availabilityMatch2[6]), int(availabilityMatch2[7]), int(availabilityMatch2[8]))
+				if not (availabilityStart <= now <= availabilityEnd):
+					#print(availabilityStart, now, availabilityEnd)
 					continue
 			else:
+				#print(event)
 				print('Couldn\'t find availability dates, skipping')
 				continue
 
