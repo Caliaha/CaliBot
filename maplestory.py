@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 import hashlib
 import pymysql.cursors
 import re
@@ -13,69 +13,70 @@ import urllib.request
 class MapleStory(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
-		self.bot.loop.create_task(self.background_lookup())
+		self.updateLoop.start()
 
-	async def background_lookup(self):
-		await self.bot.wait_until_ready()
-		while not self.bot.is_closed():
-			try:
-				newsPage = await fetchWebpage(self, 'http://maplestory2.nexon.net/en/news')
-			except:
-				print('Unable to fetch http://maplestory2.nexon.net/en/news')
+	def cog_unload(self):
+		self.updateLoop.cancel()
+
+	@tasks.loop(minutes=5.0)
+	async def updateLoop(self):
+		try:
+			newsPage = await fetchWebpage(self, 'http://maplestory2.nexon.net/en/news')
+		except:
+			print('Unable to fetch http://maplestory2.nexon.net/en/news')
+		
+		soup = BeautifulSoup(newsPage, "html.parser")
+
+		for figure in soup.find_all('figure', class_ = 'news-item'):
+			figureString = str(figure)
+			embed = discord.Embed(title='Test', description='Beep', url='https://www.google.com', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+
+			urlPattern = re.compile('<a class="news-item-link" href="(.*?)">')
+			datePattern = re.compile('<time>(.*?)</time')
+			titlePattern = re.compile('<h2>(.*?)</h2>')
+			textPattern = re.compile('<div class="short-post-text">(.*?)</div>')
+			categoryPattern = re.compile('<span class="news-category-tag.*?">(.*?)</span>')
+			imagePattern = re.compile('<div class="news-item-image" style="background-image:url\(\'(.*?)\'\)"></div>')
+
+			urlMatch = urlPattern.search(figureString)
+			dateMatch = datePattern.search(figureString)
+			titleMatch = titlePattern.search(figureString)
+			textMatch = textPattern.search(figureString)
+			categoryMatch = categoryPattern.search(figureString)
+			imageMatch = imagePattern.search(figureString)
 			
-			soup = BeautifulSoup(newsPage, "html.parser")
-
-			for figure in soup.find_all('figure', class_ = 'news-item'):
-				figureString = str(figure)
-				embed = discord.Embed(title='Test', description='Beep', url='https://www.google.com', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
-
-				urlPattern = re.compile('<a class="news-item-link" href="(.*?)">')
-				datePattern = re.compile('<time>(.*?)</time')
-				titlePattern = re.compile('<h2>(.*?)</h2>')
-				textPattern = re.compile('<div class="short-post-text">(.*?)</div>')
-				categoryPattern = re.compile('<span class="news-category-tag.*?">(.*?)</span>')
-				imagePattern = re.compile('<div class="news-item-image" style="background-image:url\(\'(.*?)\'\)"></div>')
-
-				urlMatch = urlPattern.search(figureString)
-				dateMatch = datePattern.search(figureString)
-				titleMatch = titlePattern.search(figureString)
-				textMatch = textPattern.search(figureString)
-				categoryMatch = categoryPattern.search(figureString)
-				imageMatch = imagePattern.search(figureString)
+			if urlMatch:
+				url = urlMatch[1]
+				if not urlparse(url).netloc:
+					url = 'http://maplestory2.nexon.net' + url
+				embed.url = url
+			
+			if dateMatch:
+				embed.set_footer(text = 'Posted {}'.format(dateMatch[1]))
+			
+			if imageMatch:
+				embed.set_image(url=imageMatch[1])
+			
+			if categoryMatch:
+				embed.set_author(name=categoryMatch[1])
 				
-				if urlMatch:
-					url = urlMatch[1]
-					if not urlparse(url).netloc:
-						url = 'http://maplestory2.nexon.net' + url
-					embed.url = url
+			if textMatch:
+				embed.description = textMatch[1]
+			
+			if titleMatch:
+				embed.title = titleMatch[1]
 				
-				if dateMatch:
-					embed.set_footer(text = 'Posted {}'.format(dateMatch[1]))
-				
-				if imageMatch:
-					embed.set_image(url=imageMatch[1])
-				
-				if categoryMatch:
-					embed.set_author(name=categoryMatch[1])
-					
-				if textMatch:
-					embed.description = textMatch[1]
-				
-				if titleMatch:
-					embed.title = titleMatch[1]
-					
-				postToHash = '{}:{}:{}'.format(titleMatch[1], textMatch[1], dateMatch[1])
+			postToHash = '{}:{}:{}'.format(titleMatch[1], textMatch[1], dateMatch[1])
 
-				postHash = hashlib.sha512(bytes(postToHash, "utf8")).hexdigest()
+			postHash = hashlib.sha512(bytes(postToHash, "utf8")).hexdigest()
 
-				for guild in self.bot.guilds:
-					for channel in guild.text_channels:
-						if channel.name == 'maplestory':
-							if not await self.checkIfPosted(guild.id, postHash):
-								await channel.send(embed=embed)
-								await self.storePostedData(guild.id, postHash)
-							break
-			await asyncio.sleep(600)
+			for guild in self.bot.guilds:
+				for channel in guild.text_channels:
+					if channel.name == 'maplestory':
+						if not await self.checkIfPosted(guild.id, postHash):
+							await channel.send(embed=embed)
+							await self.storePostedData(guild.id, postHash)
+						break
 
 	def subMarkup(self, text, type):
 		def urlFix(match):
@@ -151,6 +152,10 @@ class MapleStory(commands.Cog):
 		finally:
 			connection.close()
 		return True
+
+	@updateLoop.before_loop
+	async def before_updateLoop(self):
+		await self.bot.wait_until_ready()
 
 def setup(bot):
 	bot.add_cog(MapleStory(bot))
