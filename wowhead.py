@@ -96,8 +96,8 @@ class WowHead(commands.Cog):
 								await channel.send(embed=embed)
 								await self.storePostedData(guild.id, postID)
 							break
-			except:
-				pass # Bugs Squashed
+		except:
+			pass # Bugs Squashed
 
 	def subMarkup(self, text, type):
 		def urlFix(match):
