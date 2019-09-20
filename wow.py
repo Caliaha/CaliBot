@@ -26,11 +26,12 @@ LEGION_GEMS_SABER = [ 130246, 130247, 130248 ]
 LEGION_GEMS_MIDTIER = [ 130219, 130220, 130221, 130222 ]
 LEGION_GEMS_CHEAP = [ 130215, 130216, 130217, 130218, ]
 BFA_ENCHANTSLOTS = [ 'mainHand', 'finger1', 'finger2' ]
-BFA_ENCHANTS = [ 3368, 3370, 3847, 5942, 5943, 5944, 5945, 5946, 5948, 5949, 5950, 5962, 5963, 5964, 5965, 5966, 5957 ]
+BFA_ENCHANTS = [ 3368, 3370, 3847, 5942, 5943, 5944, 5945, 5946, 5948, 5949, 5950, 5955, 5962, 5963, 5964, 5965, 5966, 5957 ]
 BFA_ENCHANTS_CHEAP = [ 5938, 5939, 5940, 5941 ]
-BFA_GEMS = [ 154126, 154127, 154128, 154129 ]
-BFA_GEMS_SABER = [ 153707, 153708, 153709 ]
-BFA_GEMS_CHEAP = [ 153710, 153711, 153712 ]
+BFA_GEMS_EPIC = [ 168639, 168640, 168641, 168642 ] 
+BFA_GEMS_MIDTIER = [ 154126, 154127, 154128, 154129 ]
+BFA_GEMS_SABER = [ 153707, 153708, 153709, 168636, 168637, 168638 ]
+BFA_GEMS_CHEAP = [ 153710, 153711, 153712, 153713 ]
 
 REPUTATION_NAME = [ 'Hated', 'Hostile', 'Unfriendly', 'Neutral', 'Friendly', 'Honored', 'Revered', 'Exalted' ]
 # Deadly Deep Chemirine, Quick Lightsphene,  Masterful Argulite, Versatile Labradorite
@@ -1809,8 +1810,10 @@ class WoW(commands.Cog):
 										if toon['items'][gear]['tooltipParams']['gem' + str(i)]:
 											quality = toon['items'][gear]['tooltipParams']['gem' + str(i)]
 											#print("Gem Quality", quality, gear)
-											if quality in BFA_GEMS:
+											if quality in BFA_GEMS_EPIC:
 												pass
+											elif quality in BFA_GEMS_MIDTIER:
+												gemsMidTierEquipped += 1
 											elif quality in BFA_GEMS_SABER:
 												sabersEye = True
 											elif quality in BFA_GEMS_CHEAP:
@@ -1843,7 +1846,7 @@ class WoW(commands.Cog):
 							gearData += gear.capitalize() + ' is empty!\n'
 
 					if (not sabersEye and totalSockets > 0):
-						missingGems.append('No Kraken\'s Eye Equipped!')
+						missingGems.append('No Leviathan or Kraken\'s Eye Equipped!')
 					if (gemsMidTierEquipped > 0):
 						missingGems.append(str(gemsMidTierEquipped) + ' "okay" gems equipped!')
 					if (gemsCheapEquipped > 0):
