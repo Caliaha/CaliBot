@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 import html
+import math
 import pymysql.cursors
 import random
 import re
@@ -12,7 +13,35 @@ from stuff import BoxIt, checkPermissions, deleteMessage, doThumbs, fetchWebpage
 class Raffle(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
+		self.logs = { }
+
+
 		
+	@commands.command()
+	async def logclear(self, ctx):
+		if ctx.guild.id in self.logs:
+			del self.logs[ctx.guild.id]
+
+	@commands.command()
+	async def logstart(self, ctx):
+		if ctx.guild.id not in self.logs:
+			self.logs[ctx.guild.id] = { }
+
+	@commands.command()
+	async def loglist(self, ctx):
+		if ctx.guild.id not in self.logs:
+			return False
+		box = BoxIt()
+		box.setTitle('Raffle Log Results')
+		totalDraws = 0
+		for entry in self.logs[ctx.guild.id]:
+			totalDraws = totalDraws + self.logs[ctx.guild.id][entry]
+		for entry in self.logs[ctx.guild.id]:
+			box.addRow([ ctx.guild.get_member(int(entry)), self.logs[ctx.guild.id][entry], round((self.logs[ctx.guild.id][entry] / totalDraws) * 100, 2) ])
+		
+		box.setHeader([ 'User', 'Win Counts', 'Win Percentage' ])
+		await sendBigMessage(self, ctx, box.box(), '```', '```')
+	
 	@commands.command()
 	async def rafflehelp(self, ctx):
 		"""Shows help for raffle related commands"""
@@ -153,10 +182,17 @@ class Raffle(commands.Cog):
 					await ctx.send("There are no members to draw from")
 					return False
 
+				random.shuffle(weightedList)
 				secretRandom = secrets.SystemRandom()
 				winner = secretRandom.choice(weightedList)
-				#secure_random = random.SystemRandom()
-				#winner = secure_random.choice(weightedList)
+				try:
+					if ctx.guild.id in self.logs:
+						if winner in self.logs[ctx.guild.id]:
+							self.logs[ctx.guild.id][winner] = self.logs[ctx.guild.id][winner] + 1
+						else:
+							self.logs[ctx.guild.id][winner] = 1
+				except:
+					pass
 
 				try:
 					member = ctx.guild.get_member(int(winner))
@@ -174,7 +210,7 @@ class Raffle(commands.Cog):
 	async def odds(self, ctx, testIterations: int = 10000, threshold: int = 1):
 		"""Calculate and show current odds"""
 		if testIterations > 10000000:
-			ctx.send("I'm old, try a more reasonable number")
+			ctx.send("I'm just going to pretend I didn't see that.")
 			return False
 		try:
 			async with ctx.channel.typing():
@@ -182,6 +218,12 @@ class Raffle(commands.Cog):
 				async with connection.cursor() as cursor:
 					winners = { }
 					tickets = { }
+					actualOdds = { }
+					sql = "SELECT SUM(`tickets`) total FROM `raffle` WHERE `guildID`=%s"
+					await cursor.execute(sql, (ctx.guild.id))
+					result = await cursor.fetchone()
+					totalTickets = int(result['total'])
+					
 					for j in range(testIterations):
 						sql = "SELECT `discordID`, `tickets` FROM `raffle` WHERE `guildID`=%s"
 						await cursor.execute(sql, (ctx.guild.id))
@@ -190,11 +232,14 @@ class Raffle(commands.Cog):
 						count = cursor.rowcount
 						weightedList = [ ]
 						for result in results:
+							if result['discordID'] not in actualOdds:
+								actualOdds[result['discordID']] = round(int(result['tickets'])/totalTickets * 100, 2)
 							for i in range(int(result['tickets'])):
 								if int(result['tickets']) >= threshold:
 									tickets[result['discordID']] = result['tickets']
 									weightedList.append(result['discordID'])
 
+						random.shuffle(weightedList)
 						secretRandom = secrets.SystemRandom()
 						winner = secretRandom.choice(weightedList)
 						#secure_random = random.SystemRandom()
@@ -208,9 +253,9 @@ class Raffle(commands.Cog):
 					box = BoxIt()
 					box.setTitle('Odds over {} iterations'.format(testIterations))
 					for winner in winners:
-						box.addRow([ ctx.guild.get_member(int(winner)), tickets[winner], winners[winner], round((winners[winner] / testIterations) * 100, 2) ])
+						box.addRow([ ctx.guild.get_member(int(winner)), tickets[winner], winners[winner], round((winners[winner] / testIterations) * 100, 2), actualOdds[winner] ])
 					box.sort(2, True)
-					box.setHeader([ 'Name', 'Tickets', 'Win Counts', 'Win Percentage' ])
+					box.setHeader([ 'Name', 'Tickets', 'Win Counts', 'Sampled', 'Actual' ])
 					await sendBigMessage(self, ctx, box.box(), '```', '```')
 		finally:
 			connection.close()
