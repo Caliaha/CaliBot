@@ -74,7 +74,7 @@ class utils(commands.Cog):
 		"""Restarts CaliBot"""
 		await ctx.message.channel.send('I am restarting. It will take me a moment to reconnect')
 		print('Restarting script')
-		await self.bot.close()
+		#await self.bot.close() -- No point in doing it politely
 		await sys.exit()
 
 	@commands.command()
@@ -175,8 +175,28 @@ class utils(commands.Cog):
 	@commands.command(hidden=True)
 	@superuser()
 	@commands.guild_only()
+	async def purgeAll(self, ctx):
+		# TODO Ask for confirmation
+		counter = 0
+		async for message in ctx.channel.history(limit=None):
+			counter = counter + 1
+			await message.delete()
+		await ctx.send(f'Deleted {counter} messages')
+		
+
+	@commands.command(hidden=True)
+	@superuser()
+	@commands.guild_only()
 	async def purge(self, ctx, amount: int = 10):
-		await ctx.channel.delete_messages(await ctx.channel.history(limit=amount).flatten())
+		while(amount > 0):
+			if amount > 100:
+				toDelete = 100
+				amount = amount - 100
+			else:
+				toDelete = amount
+				amount = 0
+
+			await ctx.channel.delete_messages(await ctx.channel.history(limit=toDelete).flatten())
 
 	@commands.command(hidden=True)
 	@superuser()
