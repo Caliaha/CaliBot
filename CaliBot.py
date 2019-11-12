@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 import sys
 import time
-
+#418.91 Feb 13, 2019
 # Authorize bot link: https://discordapp.com/oauth2/authorize?&client_id=362335676248621068&scope=bot&permissions=271932480
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='CaliBot')
@@ -26,7 +26,7 @@ bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
 
-startup_extensions = [ 'announce', 'color', 'permissions', 'maplestory', 'raffle', 'settings', 'utils', 'wow', 'wowhead', 'realmTime', 'monsterhunter' ]
+startup_extensions = [ 'announce', 'color', 'permissions', 'raffle', 'settings', 'utils', 'wow', 'playing'  ]
 
 @bot.event
 async def on_ready():
