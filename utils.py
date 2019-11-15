@@ -32,6 +32,18 @@ class utils(commands.Cog):
 		await ctx.send(message)
 
 	@commands.command(hidden=True)
+	@doThumbs()
+	async def avatar(self, ctx, member: discord.Member = None):
+		if not member:
+			member = ctx.author
+		
+		try:
+			await ctx.send(f'{member.avatar_url}')
+		except:
+			await ctx.send('Failed to get avatar url')
+			return False
+
+	@commands.command(hidden=True)
 	@isBotOwner()
 	@commands.guild_only()
 	@doThumbs()
