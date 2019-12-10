@@ -72,7 +72,7 @@ class WowHead(commands.Cog):
 							embed.url = url
 
 				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\", \"news')
-				descriptionPattern2 = re.compile('<noscript>(.*?)<\/noscript>')
+				descriptionPattern2 = re.compile('<noscript>\n?(.*?)<\/noscript>')
 				noscript = str(div.find('noscript'))
 				
 				if noscript:
