@@ -103,7 +103,7 @@ class WowHead(commands.Cog):
 		def urlFix(match):
 			urlPattern1 = re.compile('<a href="https://<a href="(.*?)".*?>(.*?)</a>/">')
 			url1Match = urlPattern1.search(match.group(1))
-			urlPattern2 = re.compile('<a href="(.*?)">(.*?)</a>')
+			urlPattern2 = re.compile('<a href="(.*?)".*?>(.*?)</a>')
 			url2Match = urlPattern2.search(match.group(1))
 			url = ''
 			name = ''
