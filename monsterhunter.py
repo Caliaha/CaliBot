@@ -46,8 +46,9 @@ class MHW(commands.Cog):
 		text = text.replace('&#039;', "'")
 		text = text.replace('<br />', '')
 		text = text.replace('&amp;', '&') 
+		text = text.replace('\n', '')
 
-		return text
+		return text.strip()
 
 	
 	@tasks.loop(minutes=10.0)
@@ -62,12 +63,12 @@ class MHW(commands.Cog):
 			return
 		eventRegex = re.compile('<tr class=".*?">(.*?)</tr>', re.DOTALL)
 		titleRegex = re.compile('<div class="title"><span>(.*?)</span>')
-		imageRegex = re.compile('<td class="image"> <img src ="(.*?)" />')
+		imageRegex = re.compile('<td class="image">.*?<img src ="(.*?)" />', re.DOTALL)
 		levelRegex = re.compile('<td class="level"><span>(.*?)</span></td>')
 		descriptionRegex = re.compile('<p class="txt">(.*?)<span class="addTxt">(.*?)</span></p>')
 		locationRegex = re.compile('<li>Locale: <span>(.*?)<span></li>')
-		requirementsRegex = re.compile('<li>Requirements: <span> (.*?) </span></li>')
-		availabilityRegex = re.compile('<p class="txt"> Available <span>(\d+)/(\d+) (\d+):(\d+)<br>〜<br>(\d+)/(\d+) (\d+):(\d+)</span>')
+		requirementsRegex = re.compile('<li>Requirements: <span>(.*?)</span></li>', re.DOTALL)
+		availabilityRegex = re.compile('<p class="txt">.*?Available.*?<span>(\d+)/(\d+) (\d+):(\d+)(<br>)?〜(<br>)?(\d+)/(\d+) (\d+):(\d+)</span>', re.DOTALL)
 		availabilityRegex2 = re.compile('<p class="terms"><span>Availability</span> (\d+)-(\d+) (\d+):(\d+) 〜 (\d+)-(\d+) (\d+):(\d+)<br> </p>')
 
 
@@ -80,8 +81,18 @@ class MHW(commands.Cog):
 			availabilityMatch2 = availabilityRegex2.search(event)
 			if availabilityMatch:
 				#print('availabilityMatch')
-				availabilityStart = datetime.datetime(2019, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
-				availabilityEnd = datetime.datetime(2019, int(availabilityMatch[5]), int(availabilityMatch[6]), int(availabilityMatch[7]), int(availabilityMatch[8]))
+				startYear = 2019 # FIX ME
+				if int(availabilityMatch[1]) > int(availabilityMatch[7]):
+					endYear = startYear + 1
+				availabilityStart = datetime.datetime(startYear, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
+				if len(availabilityMatch.groups()) == 10:
+					if int(availabilityMatch[1]) > int(availabilityMatch[7]):
+						endYear = startYear + 1
+					availabilityEnd = datetime.datetime(endYear, int(availabilityMatch[7]), int(availabilityMatch[8]), int(availabilityMatch[9]), int(availabilityMatch[10]))
+				else:
+					if int(availabilityMatch[1]) > int(availabilityMatch[5]):
+						endYear = startYear + 1
+					availabilityEnd = datetime.datetime(endYear, int(availabilityMatch[5]), int(availabilityMatch[6]), int(availabilityMatch[7]), int(availabilityMatch[8]))
 				if not (availabilityStart <= now <= availabilityEnd):
 					#print(availabilityStart, now, availabilityEnd)
 					continue
