@@ -39,6 +39,7 @@ class utils(commands.Cog):
 		
 		try:
 			await ctx.send(f'{member.avatar_url}')
+			return True
 		except:
 			await ctx.send('Failed to get avatar url')
 			return False
