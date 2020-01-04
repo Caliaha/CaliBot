@@ -6,7 +6,7 @@ from pdf2image import convert_from_path, convert_from_bytes
 import pdfkit
 import pymysql.cursors
 import secrets
-from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser
+from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser, getSnowflake, getChannel
 import sys
 import time
 import uptime
@@ -183,6 +183,169 @@ class utils(commands.Cog):
 		except Exception as e:
 			await ctx.send(e)
 			return False
+		return True
+
+	@commands.command()
+	@isBotOwner()
+	@doThumbs()
+	async def denyall(self, ctx, *args):
+		"""See no evil, Hear no evil, Smell no evil"""
+		validArguments = { '-u': 'user', '-r': 'role' }
+		arguments = { }
+		
+		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
+			await ctx.send('Usage: **!denyall -r ROLE** or **!denyall -u @USER**\nCapitilization must be correct')
+			return True
+		
+		thing = None
+		for i in range(len(args)):
+			if args[i] in validArguments:
+				if i+1 <= len(args):
+					arguments[validArguments[args[i]]] = args[i+1]
+				else:
+					arguments[validArguments[args[i]]] = True
+		print(arguments)
+		if 'user' in arguments:
+			try:
+				thing = ctx.guild.get_member_named(arguments['user'])
+			except Exception as e:
+				print(e)
+
+		if 'role' in arguments:
+			if arguments['role'] == '@everyone':
+				await ctx.send('That\'s going to be a no from me, dawg.')
+				return False
+			try:
+				for role in ctx.guild.roles:
+					if role.name == arguments['role']:
+						thing = role
+						print(role.name, role.id)
+						break
+			except Exception as e:
+				print(e)
+		
+		if not thing:
+			await ctx.send('No valid users or roles passed, spelling and capitalization must be exact.', delete_after=30)
+			return False
+		
+		for channel in ctx.guild.channels:
+			print(channel)
+			try:
+				await channel.set_permissions(thing,
+					create_instant_invite=False,
+					manage_channels=False,
+					manage_roles=False, #manage permissions
+					manage_webhooks=False,
+					read_messages=False,
+					send_messages=False,
+					send_tts_messages=False,
+					manage_messages=False,
+					embed_links=False,
+					attach_files=False,
+					read_message_history=False,
+					mention_everyone=False,
+					external_emojis=False,
+					add_reactions=False,
+					connect=False,
+					speak=False,
+					mute_members=False,
+					deafen_members=False,
+					move_members=False,
+					use_voice_activation=False,
+					priority_speaker=False,
+					stream=False, #go live
+					)
+			except discord.Forbidden:
+				await ctx.send('I don\'t have permission to do that.', delete_after=30)
+				return False
+			except:
+				await ctx.send('Something went wrong.', delete_after=30)
+				return False
+		return True
+	
+	@commands.command()
+	@isBotOwner()
+	@doThumbs()
+	async def denynone(self, ctx, *args):
+		"""Removes channel overwrites"""
+		validArguments = { '-u': 'user', '-r': 'role', '-c': 'channel' }
+		arguments = { }
+		
+		if len(args) >= 1 and (args[0] == 'help' or args[0] == '-h'):
+			await ctx.send('Usage: **!denynone -r ROLE** or **!denynone -u USER**\nCan also limit to a channel with **-c CHANNEL**\nCapitilization must be correct')
+			return True
+		
+		thing = None
+		ch = None
+		for i in range(len(args)):
+			if args[i] in validArguments:
+				if i+1 <= len(args):
+					arguments[validArguments[args[i]]] = args[i+1]
+					print(type(args[i+1]), getSnowflake(args[i+1]))
+				else:
+					arguments[validArguments[args[i]]] = True
+		print(arguments)
+		if 'channel' in arguments:
+			try:
+				sf = getChannel(arguments['channel'])
+				if sf:
+					print(sf)
+					ch = ctx.guild.get_channel(int(sf[1]))
+					if not ch:
+						raise
+				else:
+					for channel in ctx.guild.channels:
+						if channel.name == arguments['channel']:
+							print(channel.name)
+							ch = channel
+			except:
+				await ctx.send('Unable to find that channel', delete_after=30)
+				return False
+		if 'user' in arguments:
+			try:
+				sf = getSnowflake(arguments['user'])
+				if sf:
+					thing = ctx.guild.get_member(sf)
+				else:
+					thing = ctx.guild.get_member_named(arguments['user'])
+			except Exception as e:
+				print(e)
+
+		if 'role' in arguments:
+			if arguments['role'] == '@everyone':
+				await ctx.send('That\'s going to be a no from me, dawg.')
+				return False
+			try:
+				for role in ctx.guild.roles:
+					if role.name == arguments['role']:
+						thing = role
+						print(role.name, role.id)
+						break
+			except Exception as e:
+				print(e)
+		if not thing:
+			await ctx.send('No valid users or roles passed, spelling and capitalization must be exact.', delete_after=30)
+			return False
+		if ch:
+			try:
+				await ch.set_permissions(thing, overwrite=None)
+			except discord.Forbidden:
+				await ctx.send('I don\'t have permission to do that.', delete_after=30)
+				return False
+			except:
+				await ctx.send('Something went wrong.', delete_after=30)
+				return False
+		else:
+			for channel in ctx.guild.channels:
+				print(channel)
+				try:
+					await channel.set_permissions(thing, overwrite=None)
+				except discord.Forbidden:
+					await ctx.send('I don\'t have permission to do that.', delete_after=30)
+					return False
+				except:
+					await ctx.send('Something went wrong.', delete_after=30)
+					return False
 		return True
 
 	@commands.command(hidden=True)
