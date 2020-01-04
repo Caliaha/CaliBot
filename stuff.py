@@ -161,6 +161,15 @@ def deleteMessage():
 		return wrapper
 	return decorator
 
+def getChannel(string):
+	if string.isdigit():
+		return string
+	
+	match = re.match(r'<#([0-9]+)>$', string)
+	if match:
+		return match
+	return None
+
 def getSnowflake(string):
 	if string.isdigit():
 		return string
