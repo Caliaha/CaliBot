@@ -26,7 +26,7 @@ bot.USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
 
-startup_extensions = [ 'announce', 'color', 'permissions', 'raffle', 'settings', 'utils', 'wow', 'playing', 'wowhead', 'monsterhunter'  ]
+startup_extensions = [ 'announce', 'color', 'permissions', 'raffle', 'settings', 'utils', 'wow', 'playing', 'wowhead', 'monsterhunter' ]
 
 @bot.event
 async def on_ready():
