@@ -71,35 +71,49 @@ class MHW(commands.Cog):
 		availabilityRegex = re.compile('<p class="txt">.*?Available.*?<span>(\d+)/(\d+) (\d+):(\d+)(<br>)?〜(<br>)?(\d+)/(\d+) (\d+):(\d+)</span>', re.DOTALL)
 		availabilityRegex2 = re.compile('<p class="terms"><span>Availability</span> (\d+)-(\d+) (\d+):(\d+) 〜 (\d+)-(\d+) (\d+):(\d+)<br> </p>')
 
-
-
 		now = datetime.datetime.now()
+		currentYear = now.year
+		currentMonth = now.month
 		for eventRaw in eventRegex.findall(eventsPage):
 			event = ' '.join(eventRaw.split())
 			#print(' '.join(event.split()))
 			availabilityMatch = availabilityRegex.search(event)
 			availabilityMatch2 = availabilityRegex2.search(event)
 			if availabilityMatch:
-				#print('availabilityMatch')
-				startYear = 2019 # FIX ME
+				#print('availabilityMatch', int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]), int(availabilityMatch[7]), int(availabilityMatch[8]), int(availabilityMatch[9]), int(availabilityMatch[10]))
+				endYear = currentYear
+				
+				# We append the current year on to the dates we scrape of the website
+				# This works until a date range crosses a year or is fully in the next
+				# If the end month is earlier than the start month, we add a year
+
+				startMonth = int(availabilityMatch[1])
+				
 				if int(availabilityMatch[1]) > int(availabilityMatch[7]):
-					endYear = startYear + 1
-				availabilityStart = datetime.datetime(startYear, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
+					endYear = currentYear + 1
+				availabilityStart = datetime.datetime(currentYear, int(availabilityMatch[1]), int(availabilityMatch[2]), int(availabilityMatch[3]), int(availabilityMatch[4]))
 				if len(availabilityMatch.groups()) == 10:
+					endMonth = int(availabilityMatch[7])
 					if int(availabilityMatch[1]) > int(availabilityMatch[7]):
-						endYear = startYear + 1
+						endYear = currentYear + 1
 					availabilityEnd = datetime.datetime(endYear, int(availabilityMatch[7]), int(availabilityMatch[8]), int(availabilityMatch[9]), int(availabilityMatch[10]))
 				else:
 					if int(availabilityMatch[1]) > int(availabilityMatch[5]):
-						endYear = startYear + 1
+						endMonth = int(availabilityMatch[5])
+						endYear = currentYear + 1
+						print('Incremented endYear')
 					availabilityEnd = datetime.datetime(endYear, int(availabilityMatch[5]), int(availabilityMatch[6]), int(availabilityMatch[7]), int(availabilityMatch[8]))
+				#print('Year:', currentYear, endYear, startMonth, endMonth)
+				if currentYear != endYear and startMonth == endMonth:
+					print('Start/End Months are the same but years are different')
+					continue
 				if not (availabilityStart <= now <= availabilityEnd):
-					#print(availabilityStart, now, availabilityEnd)
+					#print('Skipping', availabilityStart, now, availabilityEnd)
 					continue
 			elif availabilityMatch2:
-				#print('availabilityMatch2')
-				availabilityStart = datetime.datetime(2019, int(availabilityMatch2[1]), int(availabilityMatch2[2]), int(availabilityMatch2[3]), int(availabilityMatch2[4]))
-				availabilityEnd = datetime.datetime(2019, int(availabilityMatch2[5]), int(availabilityMatch2[6]), int(availabilityMatch2[7]), int(availabilityMatch2[8]))
+				print('availabilityMatch2')
+				availabilityStart = datetime.datetime(currentYear, int(availabilityMatch2[1]), int(availabilityMatch2[2]), int(availabilityMatch2[3]), int(availabilityMatch2[4]))
+				availabilityEnd = datetime.datetime(currentYear, int(availabilityMatch2[5]), int(availabilityMatch2[6]), int(availabilityMatch2[7]), int(availabilityMatch2[8]))
 				if not (availabilityStart <= now <= availabilityEnd):
 					#print(availabilityStart, now, availabilityEnd)
 					continue
