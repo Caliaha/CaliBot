@@ -37,6 +37,7 @@ class WoW(commands.Cog):
 	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
+
 		validArguments = { '-g': 'guild', '-s': 'realm', '-t': 'threshold', '-f': 'fullWait' }
 		arguments = { }
 		
@@ -165,7 +166,7 @@ class WoW(commands.Cog):
 
 		try:
 			headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0' }
-			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-3&class=all&role=all&page=0')
+			rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={realm}&guild={guild}&season=season-bfa-3-post&class=all&role=all&page=0')
 		except:
 			await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
 			await updateableMessage.delete()
