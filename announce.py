@@ -31,42 +31,46 @@ class Announce(commands.Cog):
 			pass
 
 	async def processQueue(self, guild):
-		while True:
-			print('ProcessQueueLoopStart', guild.name)
-			tts = await self.queue[guild.id].get()
+		try:
+			while True:
+				print('ProcessQueueLoopStart', guild.name)
+				tts = await self.queue[guild.id].get()
 
-			print(tts["guild"])
-			print(guild.id, guild.name)
-			try:
-				if guild.voice_client is not None:
-					#if tts["action"]:
-						#await self.updateNickname(tts["guild"], tts["name"], tts["action"])
-					process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', f'-w={self.bot.TTS_FILE}-{guild.id}.wav', tts["message"]])
-					(output, err) = process.communicate()
-					exit_code = process.wait()
+				print(tts["guild"])
+				print(guild.id, guild.name)
+				try:
+					if guild.voice_client is not None:
+						#if tts["action"]:
+							#await self.updateNickname(tts["guild"], tts["name"], tts["action"])
+						process = Popen([self.bot.TTS_PROGRAM, '-l=en-US', f'-w={self.bot.TTS_FILE}-{guild.id}.wav', tts["message"]])
+						(output, err) = process.communicate()
+						exit_code = process.wait()
 
-					if (not guild.voice_client.is_connected()):
-						print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
-						await self.leaveVoiceChannel(guild, guild.voice_client.channel)
+						if (not guild.voice_client.is_connected()):
+							print("playTTS() not connected", 'Skipping:', tts["guild"], tts["name"])
+							await self.leaveVoiceChannel(guild, guild.voice_client.channel)
+						else:
+							try:
+								guild.voice_client.play(discord.FFmpegPCMAudio(f'{self.bot.TTS_FILE}-{guild.id}.wav'))
+							except Exception as e:
+								print(e, 'Error in voice.play')
+
+							print('Sleeping while playing')
+							try:
+								timer = time.time()
+								while(guild.voice_client.is_playing() and time.time() < timer + 10): #FIX ME
+									await asyncio.sleep(0.1)
+							except:
+								pass
+							print('Done sleeping')
 					else:
-						try:
-							guild.voice_client.play(discord.FFmpegPCMAudio(f'{self.bot.TTS_FILE}-{guild.id}.wav'))
-						except Exception as e:
-							print(e, 'Error in voice.play')
-
-						print('Sleeping while playing')
-						try:
-							timer = time.time()
-							while(guild.voice_client.is_playing() and time.time() < timer + 10): #FIX ME
-								await asyncio.sleep(0.1)
-						except:
-							pass
-						print('Done sleeping')
-				else:
-					print("I was asked to announce for something that I do not have a voice_client for")
-			except Exception as e:
-				print('VoiceLoop', e)
-			#await self.updateNickname(tts["guild"], None)
+						print("I was asked to announce for something that I do not have a voice_client for")
+				except Exception as e:
+					print('VoiceLoop', e)
+				#await self.updateNickname(tts["guild"], None)
+		except Exception as e:
+			print('processQueue', e)
+			pass
 
 	async def fetchPhoneticName(self, member):
 		try:
@@ -104,7 +108,7 @@ class Announce(commands.Cog):
 	async def findNewVoiceChannel(self, guild):
 		print('Looking for new voice channel to join')
 		for voiceChannel in guild.voice_channels:
-			if str(voiceChannel.id) not in self.ignored_channels[guild.id] and self.countNonBotMembers(voiceChannel.members) > 0:
+			if str(voiceChannel.id) not in self.ignored_channels[guild.id] and self.countNonBotMembers(voiceChannel.members) > 0 and (voiceChannel.user_limit == 0 or voiceChannel.user_limit == 99):
 				print('Attempting to join or move to {} on {}'.format(voiceChannel, guild))
 				if await self.joinOrMove(guild, voiceChannel):
 					print('Succeeded')
@@ -157,7 +161,7 @@ class Announce(commands.Cog):
 			pass
 		if member.guild.voice_client and member.guild.voice_client.is_connected():		#guild.id in self.guildQueue
 			if self.countNonBotMembers(member.guild.voice_client.channel.members) == 0:
-				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
+				if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id] and (after.channel.user_limit == 0 or after.channel.user_limit == 99):
 					print('Moving to {} because our channel is empty'.format(after.channel))
 					await self.joinOrMove(guild, after.channel)
 					return
@@ -173,7 +177,7 @@ class Announce(commands.Cog):
 				# If we have a voice client but aren't connected then force disconnect
 				print('I have a voice_client for {} but I\'m not connected'.format(member.guild))
 				await self.leaveVoiceChannel(guild, after.channel)
-			if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id]:
+			if after.channel and str(after.channel.id) not in self.ignored_channels[guild.id] and (after.channel.user_limit == 0 or after.channel.user_limit == 99):
 				print('Joining {} because someone has entered a valid voice channel'.format(after.channel))
 				await self.joinOrMove(guild, after.channel)
 				return
@@ -346,12 +350,13 @@ class Announce(commands.Cog):
 				results = cursor.fetchall()
 				for result in results:
 					sql = "UPDATE `guild_defaults` SET `announce` = %s WHERE `guildID` = %s LIMIT 1"
+					print(result['announce'])
 					if result['announce'] == True:
 						cursor.execute(sql, (False, str(ctx.guild.id)))
 						self.allowedGuilds.remove(ctx.guild.id)
 						await ctx.send('I will no longer annouce for this guild.')
-						await self.leaveVoiceChannel(ctx.guild, ctx.guild.voice_client.channel)
-					if result['announce'] == False:
+						#await self.leaveVoiceChannel(ctx.guild, ctx.guild.voice_client.channel)
+					else:
 						cursor.execute(sql, (True, str(ctx.guild.id)))
 						self.allowedGuilds.append(ctx.guild.id)
 						await ctx.send('I will announce for this guild.')
@@ -369,7 +374,7 @@ class Announce(commands.Cog):
 		finally:
 			connection.close()
 
-	@commands.command()
+	@commands.command(aliases=['stop'])
 	@commands.guild_only()
 	@checkPermissions('voice')
 	@deleteMessage()
