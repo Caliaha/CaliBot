@@ -441,6 +441,7 @@ class utils(commands.Cog):
 		await ctx.send(text.translate(table))
 
 	@commands.command(hidden=True)
+	@isBotOwner()
 	@doThumbs()
 	async def cogs(self, ctx):
 		cogs = []
@@ -455,6 +456,7 @@ class utils(commands.Cog):
 		return True
 	
 	@commands.command(hidden=True)
+	@isBotOwner()
 	@doThumbs()
 	async def enablecog(self, ctx, *, name):
 		name = cleanUserInput(name)
@@ -468,6 +470,7 @@ class utils(commands.Cog):
 		return True
 
 	@commands.command(hidden=True)
+	@isBotOwner()
 	@doThumbs()
 	async def disablecog(self, ctx, *, name):
 		name = cleanUserInput(name)
