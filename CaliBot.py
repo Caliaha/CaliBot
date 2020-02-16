@@ -44,4 +44,4 @@ if __name__ == "__main__":
 		print("Loaded cog: ", file)
 
 
-	bot.run(config.DISCORD_TOKEN_TEST)
+	bot.run(config.DISCORD_TOKEN)
