@@ -2,11 +2,12 @@ from dateutil.relativedelta import relativedelta
 import discord
 from discord.ext import commands
 from io import BytesIO
-from pdf2image import convert_from_path, convert_from_bytes
-import pdfkit
+import os
+#from pdf2image import convert_from_path, convert_from_bytes
+#import pdfkit
 import pymysql.cursors
 import secrets
-from stuff import checkPermissions, deleteMessage, doThumbs, isBotOwner, superuser, getSnowflake, getChannel
+from stuff import checkPermissions, cleanUserInput, deleteMessage, doThumbs, isBotOwner, superuser, getSnowflake, getChannel
 import sys
 import time
 import uptime
@@ -88,7 +89,7 @@ class utils(commands.Cog):
 		await ctx.message.channel.send('I am restarting. It will take me a moment to reconnect')
 		print('Restarting script')
 		#await self.bot.close() -- No point in doing it politely
-		await sys.exit()
+		os._exit(0)
 
 	@commands.command()
 	@doThumbs()
@@ -98,23 +99,23 @@ class utils(commands.Cog):
 		await ctx.send('Computer Uptime: ' + '{0.days:01.0f} days {0.hours:01.0f} hours {0.minutes:01.0f} minutes {0.seconds:01.0f} seconds'.format(relativedelta(seconds=uptime.uptime())))
 		return True
 
-	def convertwebpagetopdf(self, url):
-		images = [ ]
-		pdf = pdfkit.from_url(url, False)
-		pages = convert_from_bytes(pdf)
-		for page in pages:
-			with BytesIO() as output:
-				page.save(output, format='png')
-				images.append(output.getvalue())
-		
-		return images
+#	def convertwebpagetopdf(self, url):
+#		images = [ ]
+#		pdf = pdfkit.from_url(url, False)
+#		pages = convert_from_bytes(pdf)
+#		for page in pages:
+#			with BytesIO() as output:
+#				page.save(output, format='png')
+#				images.append(output.getvalue())
+#		
+#		return images
 
-	@commands.command(hidden=True)
-	@doThumbs()
-	async def renderpage(self, ctx, url: str):
-		images = await self.bot.loop.run_in_executor(None, self.convertwebpagetopdf, url)
-		for image in images:
-			await ctx.send(file=discord.File(image, 'file.png'))
+#	@commands.command(hidden=True)
+#	@doThumbs()
+#	async def renderpage(self, ctx, url: str):
+#		images = await self.bot.loop.run_in_executor(None, self.convertwebpagetopdf, url)
+#		for image in images:
+#			await ctx.send(file=discord.File(image, 'file.png'))
 
 	@commands.command(hidden=True)
 	@isBotOwner()
@@ -351,6 +352,17 @@ class utils(commands.Cog):
 	@commands.command(hidden=True)
 	@superuser()
 	@commands.guild_only()
+	async def purgeUser(self, ctx, user: discord.Member):
+		counter = 0
+		async for message in ctx.channel.history(limit=None):
+			if message.author.id == user.id:
+				counter = counter + 1
+				await message.delete()
+		await ctx.send(f'Deleted {counter} messages')
+
+	@commands.command(hidden=True)
+	@superuser()
+	@commands.guild_only()
 	async def purgeAll(self, ctx):
 		# TODO Ask for confirmation
 		counter = 0
@@ -427,6 +439,46 @@ class utils(commands.Cog):
 		"""Makes text hard to read"""
 		table = str.maketrans('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', '⓪①②③④⑤⑥⑦⑧⑨ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ')
 		await ctx.send(text.translate(table))
+
+	@commands.command(hidden=True)
+	@doThumbs()
+	async def cogs(self, ctx):
+		cogs = []
+		for filename in os.listdir(f'./{self.bot.COG_DIRECTORY}'):
+			if not os.path.isfile(f'./{self.bot.COG_DIRECTORY}/{filename}'):
+				continue
+			(file, ext) = os.path.splitext(filename)
+			if not ext == '.py':
+				continue
+			cogs.append(file)
+		await ctx.send(f'Enabled cogs: {", ".join(name for name in cogs)}')
+		return True
+	
+	@commands.command(hidden=True)
+	@doThumbs()
+	async def enablecog(self, ctx, *, name):
+		name = cleanUserInput(name)
+		if os.path.isfile(f'./{self.bot.COG_DIRECTORY}/{name}.py'):
+			await ctx.send('That cog already seems to be enabled.')
+			return False
+		try:
+			os.rename(f'./{self.bot.COG_DIRECTORY_DISABLED}/{name}.py', f'./{self.bot.COG_DIRECTORY}/{name}.py')
+		except Exception as e:
+			await ctx.send(e)
+		return True
+
+	@commands.command(hidden=True)
+	@doThumbs()
+	async def disablecog(self, ctx, *, name):
+		name = cleanUserInput(name)
+		if os.path.isfile(f'./{self.bot.COG_DIRECTORY_DISABLED}/{name}.py'):
+			await ctx.send('That cog already seems to be disabled.')
+			return False
+		try:
+			os.rename(f'./{self.bot.COG_DIRECTORY}/{name}.py', f'./{self.bot.COG_DIRECTORY_DISABLED}/{name}.py')
+		except Exception as e:
+			await ctx.send(e)
+		return True
 
 def setup(bot):
 	bot.add_cog(utils(bot))
