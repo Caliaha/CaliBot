@@ -213,6 +213,7 @@ class BoxIt():
 		self.title = ''
 		self.header = False
 		self.footer = False
+		self.seperateEveryLine = False
 		self.data = []
 		self.biggest = {}
 
@@ -333,11 +334,17 @@ class BoxIt():
 			box.append(self.generateRow(data))
 			if index==0 and self.header:
 				box.append(self.generateSeperatorLine(data))
+			else:
+				if self.seperateEveryLine:
+					box.append(self.generateSeperatorLine(self.data[0], self.BOX_HORIZ_CONNECTOR_THIN, u'┼', u'╟', u'╢'))
 
 		if self.footer:
 			box.append(self.generateSeperatorLine(self.footer, self.BOX_HORIZ_CONNECTOR_THIN, u'┼', u'╟', u'╢'))
 			box.append(self.generateRow(self.footer))
 
+		if self.seperateEveryLine:
+			box.pop()
+		
 		box.append(self.generateLastLine())
 		
 		thing = ''
@@ -353,19 +360,19 @@ async def fetchWebpage(self, url, binary=False):
 	headers = { 'User-Agent' : self.bot.USER_AGENT }
 	while attempts < 15:
 		try:
-			with async_timeout.timeout(25):
-				async with self.bot.SESSION.get(url, headers=headers) as r:
-					if r.status == 200:
-						if binary:
-							return await r.read()
-						else:
-							return await r.text()
-					elif r.status == 404:
-						print("Page was 404")
-						return False
+			#with async_timeout.timeout(25):
+			async with self.bot.SESSION.get(url, headers=headers) as r:
+				if r.status == 200:
+					if binary:
+						return await r.read()
 					else:
-						print(r.status)
-						raise
+						return await r.text()
+				elif r.status == 404:
+					print("Page was 404")
+					return False
+				else:
+					print(r.status)
+					raise
 		except Exception as e:
 			print("Failed to grab webpage", url, attempts, e)
 			attempts += 1
