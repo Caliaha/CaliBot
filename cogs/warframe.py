@@ -295,6 +295,7 @@ class Warframe(commands.Cog):
 					sql = 'DELETE FROM `wf_voidRelics` WHERE `id` = %s'
 					cursor.execute(sql, (alertID))
 					connection.commit()
+					self.loadAlerts()
 					return True
 		finally:
 			connection.close()
