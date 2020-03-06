@@ -2,32 +2,42 @@ import datetime
 import discord
 from discord.ext import tasks, commands
 import json
+import logging
 import pymysql.cursors
 import re
 from stuff import BoxIt, doThumbs, fetchWebpage, sendBigMessage
+import time
 
 
 class Warframe(commands.Cog):
 	"""TBD"""
 	def __init__(self, bot):
 		self.bot = bot
+		self.logger = logging.getLogger(f'CaliBot.{__name__}')
 		# MAYBE DO SOMETHING ABOUT THIS
 		self.relics = { 'lith': 'VoidT1', 'meso': 'VoidT2', 'neo': 'VoidT3', 'axi': 'VoidT4', 'reqium': 'VoidT5' }
 		self.missionTypes = { 'capture': 'MT_CAPTURE', 'defense': 'MT_DEFENSE', 'excavate': 'MT_EXCAVATE', 'interception': 'MT_TERRITORY', 'mobiledefense': 'MT_MOBILE_DEFENSE', 'rescue': 'MT_RESCUE', 'sabotage': 'MT_SABOTAGE', 'survival': 'MT_SURVIVAL' }
-		activeAlerts = { }
-		activeAlerts['void'] =  { 'VoidT1': [ ], 'VoidT2': [ ], 'VoidT3': [ ], 'VoidT4': [ ], 'VoidT5': [ ] }
-		self.activeAlerts = activeAlerts
+		self.activeAlerts = { }
+		self.activeAlerts['void'] =  { 'VoidT1': [ ], 'VoidT2': [ ], 'VoidT3': [ ], 'VoidT4': [ ], 'VoidT5': [ ] }
+		#self.activeAlerts = activeAlerts
 		self.alreadyAlerted = { }
 		self.activeVoidFissures = [ ]
+		self.cetusDawn = 0
+		self.vallisHot = 0
+		self.lastPresence = ''
 		self.updateLoop.start()
+		self.playingStatus.start()
 		
 		with open('data/solNodes.json', 'r') as file:
 			self.solNodes = json.load(file)
 
 	def cog_unload(self):
 		self.updateLoop.cancel()
+		self.playingStatus.cancel()
 
 	def loadAlerts(self):
+		self.activeAlerts['void'].clear()
+		self.activeAlerts['void'] =  { 'VoidT1': [ ], 'VoidT2': [ ], 'VoidT3': [ ], 'VoidT4': [ ], 'VoidT5': [ ] }
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
@@ -46,10 +56,10 @@ class Warframe(commands.Cog):
 					})
 					if result['id'] not in self.alreadyAlerted:
 						self.alreadyAlerted[result['id']] = [ ]
+		except Exception as e:
+			self.logger.error(f'loadAlerts {e}')
 		finally:
 			connection.close()
-		#alert = { 'missionType': 'MT_DEFENSE', 'alertType': 'personal', 'owner': 208758694555418624, 'runOnce': True, 'alertedFor': [ ] }
-		#self.activeAlerts['void']['VoidT4'].append(alert)
 
 	async def doAlertEmbed(self, void, alert):
 		relicsR = { 'VoidT1': 'Lith', 'VoidT2': 'Meso', 'VoidT3': 'Neo', 'VoidT4': 'Axi', 'VoidT5': 'Reqium' }
@@ -88,7 +98,7 @@ class Warframe(commands.Cog):
 				cursor.execute(sql, (msg.id, void['_id']['$oid'], expireDate, alert['alertType'], alert['ownerID'], alert['guildID'], alert['channelID']))
 				connection.commit()
 		except Exception as e:
-			print('Error adding to wf_outstanding', e)
+			self.logger.error(f'Error adding to wf_outstanding {e}')
 		finally:
 			connection.close()
 		
@@ -127,16 +137,74 @@ class Warframe(commands.Cog):
 					cursor.execute(sql, (result['id']))
 					connection.commit()
 		except Exception as e:
-			print('Error adding to wf_outstanding', e)
+			self.logger.error(f'Error adding to wf_outstanding {e}')
 		finally:
 			connection.close()
 		pass
 
+	def getSimpleTime(self, totalSeconds):
+		hours, remainder = divmod(totalSeconds, 3600)
+		minutes, seconds = divmod(remainder, 60)
+		
+		dateString = ''
+		if hours > 0:
+			dateString = f'{int(hours)}h:'
+		return f'{dateString}{int(minutes)}m'
+
+	@tasks.loop(seconds=10)
+	async def playingStatus(self):
+		if self.cetusDawn == 0 or self.vallisHot == 0:
+			return
+		currentTime = time.time()
+		if time.time() >= self.cetusDawn: # Old date is expired, so create new expire date based on old one until updateLoop fixes it
+			self.cetusDawn = self.cetusDawn + (150 * 60)
+		#if currentTime >= self.vallisHot:
+
+		#Next DAWN = self.cetusDawn
+		#100 Minutes Day + 50 Minutes Day = 1 Cycle
+		#if self.cetusDawn - currentTime > (100 * 60) = Still day?
+		#print('Vallis:', datetime.datetime.fromtimestamp(self.vallisHot).strftime('%Y-%m-%d %H:%M:%S'))
+		#print('Vallis:', datetime.datetime.fromtimestamp(self.vallisHot-currentTime).strftime('%M:%S'))
+		#print(datetime.datetime.fromtimestamp(self.cetusDawn).strftime('%Y-%m-%d %H:%M:%S'))
+		#print(datetime.datetime.fromtimestamp(self.cetusDawn-currentTime).strftime('%M:%S'))
+		#vallisCycleLength = (26 * 60) + 40
+		#print('Loop', int(currentTime) - self.vallisHot, vallisCycleLength)
+		#print('Loop', (int(currentTime) - self.vallisHot) % vallisCycleLength)
+		print(self.cetusDawn - (currentTime + (50*60)), self.cetusDawn, currentTime)
+		#if self.vallisHot - currentTime > (20 * 60):
+		#	print('Vallis is Hot', 'Cold in')
+		#else:
+		#	print('Vallis is Cold', 'Warm in', datetime.datetime.fromtimestamp(self.cetusDawn-currentTime).strftime('%M:%S'))
+		print('Current Time:', datetime.datetime.fromtimestamp(currentTime).strftime('%Y-%m-%d %H:%M:%S'))
+		print('Cetus:', datetime.datetime.fromtimestamp(self.cetusDawn).strftime('%Y-%m-%d %H:%M:%S'))
+		print(self.cetusDawn - currentTime, 100 * 60, self.cetusDawn, currentTime)
+		if self.cetusDawn - currentTime >= (50 * 60): # Not night time
+			currentStatus = f'🌙 in {self.getSimpleTime(self.cetusDawn-(currentTime+(50*60)))}'
+		else:
+			currentStatus = f'☀️ in {self.getSimpleTime(self.cetusDawn - (currentTime))}'
+			#currentStatus = f'D:{datetime.datetime.fromtimestamp(self.cetusDawn-currentTime).strftime("%Mm")}'
+		#self.logger.debug(currentStatus)
+		if currentStatus != self.lastPresence:
+			self.lastPresence = currentStatus
+			try:
+				await self.bot.change_presence(activity=discord.Game(name=self.lastPresence))
+			except:
+				self.logger.warn('Failed to change presence')
+
+
 	@tasks.loop(minutes=5.0)
 	async def updateLoop(self):
-		page = await fetchWebpage(self, 'http://content.warframe.com/dynamic/worldState.php')
-		data = json.loads(page)
+		try:
+			page = await fetchWebpage(self, 'http://content.warframe.com/dynamic/worldState.php')
+			data = json.loads(page)
+		except Exception as e:
+			self.logger.error('Failed to parse worldState json {e}')
 		self.activeVoidFissures.clear()
+		try:
+			self.cetusDawn = int(re.sub('[^0-9]', '', str(data['SyndicateMissions'][17]['Expiry']['$date'])))/1000
+			self.vallisHot = int(re.sub('[^0-9]', '', str(data['SyndicateMissions'][16]['Activation']['$date'])))/1000
+		except Exception as e:
+			print(e)
 		for void in data['ActiveMissions']:
 			self.activeVoidFissures.append(void['_id']['$oid'])
 			for alert in self.activeAlerts['void'][void['Modifier']]:
@@ -154,7 +222,7 @@ class Warframe(commands.Cog):
 						print('Deleting from self.activeVoidFissures', alertID, missionID)
 						self.alreadyAlerted[alertID].remove(missionID)
 		except Exception as e:
-			print(e)
+			self.logger.warn(e)
 		await self.purgeOutdatedAlerts()
 
 	#@tasks.loop(minutes=5.0)
@@ -189,6 +257,10 @@ class Warframe(commands.Cog):
 	@updateLoop.before_loop
 	async def before_updateLoop(self):
 		self.loadAlerts()
+		await self.bot.wait_until_ready()
+
+	@playingStatus.before_loop
+	async def before_playingStatus(self):
 		await self.bot.wait_until_ready()
 
 	@commands.group(invoke_without_command=True)
