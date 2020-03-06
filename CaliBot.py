@@ -2,6 +2,7 @@
 import config
 import discord
 from discord.ext import commands
+import logging
 import os
 import sys
 import time
@@ -28,6 +29,20 @@ bot.COG_DIRECTORY = config.COG_DIRECTORY
 bot.COG_DIRECTORY_DISABLED = config.COG_DIRECTORY_DISABLED
 
 bot.SESSION = aiohttp.ClientSession(loop=bot.loop)
+
+bot.log = logging.getLogger('CaliBot')
+bot.log.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh = logging.FileHandler('CaliBot.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+bot.log.addHandler(fh)
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+bot.log.addHandler(ch)
 
 @bot.event
 async def on_ready():
