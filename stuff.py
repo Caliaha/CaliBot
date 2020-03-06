@@ -2,6 +2,7 @@
 import async_timeout
 import discord
 from functools import wraps
+import logging
 import pymysql.cursors
 import re
 
@@ -368,13 +369,15 @@ async def fetchWebpage(self, url, binary=False):
 					else:
 						return await r.text()
 				elif r.status == 404:
-					print("Page was 404")
+					logger.warn('Failed to grab webpage, aborting: {url}, {attempts}, {e}')
 					return False
 				else:
 					print(r.status)
 					raise
 		except Exception as e:
-			print("Failed to grab webpage", url, attempts, e)
+			logger = logging.getLogger(f'CaliBot.{__name__}')
+			logger.warn(f'Failed to grab webpage: {url}, {attempts}, {e}')
+			#print("Failed to grab webpage", url, attempts, e)
 			attempts += 1
 	raise ValueError('Unable to fetch url')
 
