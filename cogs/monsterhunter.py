@@ -27,7 +27,7 @@ class MHW(commands.Cog):
 		for guild in self.guilds:
 			for channel in guild.text_channels:
 				if channel.name == 'mhw-events':
-					async for message in channel.history():
+					async for message in channel.history(limit=None):
 						if message.author != guild.me:
 							continue
 						for embed in message.embeds:
