@@ -34,7 +34,7 @@ class utils(commands.Cog):
 
 	@commands.command(hidden=True)
 	@doThumbs()
-	async def avatar(self, ctx, member: discord.Member = None):
+	async def avatar(self, ctx, member: discord.User = None):
 		if not member:
 			member = ctx.author
 		
@@ -123,7 +123,7 @@ class utils(commands.Cog):
 	async def load(self, ctx, extension_name : str):
 		"""Loads an extension."""
 		try:
-			self.bot.load_extension(extension_name)
+			self.bot.load_extension(f'{self.bot.COG_DIRECTORY}.{extension_name}')
 		except (AttributeError, ImportError) as e:
 			await ctx.send("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
 			return False
@@ -135,7 +135,7 @@ class utils(commands.Cog):
 	@doThumbs()
 	async def unload(self, ctx, extension_name : str):
 		"""Unloads an extension."""
-		self.bot.unload_extension(extension_name)
+		self.bot.unload_extension(f'{self.bot.COG_DIRECTORY}.{extension_name}')
 		await ctx.send("{} unloaded.".format(extension_name))
 		return True
 
@@ -144,9 +144,9 @@ class utils(commands.Cog):
 	@doThumbs()
 	async def reload(self, ctx, extension_name : str):
 		"""Unloads and then loads an extension."""
-		self.bot.unload_extension(extension_name)
+		self.bot.unload_extension(f'{self.bot.COG_DIRECTORY}.{extension_name}')
 		try:
-			self.bot.load_extension(extension_name)
+			self.bot.load_extension(f'{self.bot.COG_DIRECTORY}.{extension_name}')
 		except (AttributeError, ImportError) as e:
 			await ctx.send("```py\n{}: {}\n```".format(type(e).__name__, str(e)))
 			return False
