@@ -28,7 +28,7 @@ class WowHead(commands.Cog):
 		try: # Nothing wrong with just try/excepting the whole thing is there
 			soup = BeautifulSoup(newsPage, "html.parser")
 
-			for div in soup.find_all('div', class_ = 'news-post news-post-style-teaser'):
+			for div in reversed(soup.find_all('div', class_ = 'news-post news-post-style-teaser')):
 				embed = discord.Embed(title='Test', description='Beep', url='https://www.google.com', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 				postID = div.get('id')
 				if postID is None:
@@ -52,6 +52,7 @@ class WowHead(commands.Cog):
 							#print('Setting url to', url)
 							if not urlparse(url).netloc:
 								url = 'https://www.wowhead.com' + url
+							print(f'Set URL to {url}')
 							embed.url = url
 							if 'style' in a.attrs:
 								style = a.get('style')
@@ -66,10 +67,11 @@ class WowHead(commands.Cog):
 							if (a.text):
 								embed.set_author(name=a.text)
 
-							url = a.get('href')
-							if not urlparse(url).netloc:
-								url = 'https://www.wowhead.com' + url
-							embed.url = url
+							#url = a.get('href')
+							#if not urlparse(url).netloc:
+							#	url = 'https://www.wowhead.com' + url
+							#print(f'URL: {url}')
+							#embed.url = url
 
 				descriptionPattern = re.compile('WH\.markup\.printHtml\(\"(.*?)\", \"news')
 				descriptionPattern2 = re.compile('<noscript>\n?(.*?)<\/noscript>')
@@ -93,8 +95,12 @@ class WowHead(commands.Cog):
 						if channel.name == 'wowhead':
 							if not await self.checkIfPosted(guild.id, postID):
 								#print("Not posted")
-								await channel.send(embed=embed)
-								await self.storePostedData(guild.id, postID)
+								try:
+									await channel.send(embed=embed)
+								except Exception as e:
+									print('Error in wowhead:', e)
+								finally:
+									await self.storePostedData(guild.id, postID)
 							break
 		except:
 			pass # Bugs Squashed
