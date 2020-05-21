@@ -32,7 +32,91 @@ class Borderlands(commands.Cog):
 						description = f'{description}\n{p2.text}'
 		return description
 
-	@tasks.loop(minutes=60.0)
+	def subMarkup(self, text):
+		def urlFix(match):
+			urlPattern1 = re.compile('<a href="https://<a href="(.*?)".*?>(.*?)</a>/">')
+			url1Match = urlPattern1.search(match.group(1))
+			urlPattern2 = re.compile('<a href="(.*?)".*?>(.*?)</a>')
+			url2Match = urlPattern2.search(match.group(1))
+			url = ''
+			name = ''
+			
+			if url1Match:
+				#print(url1Match[1], url1Match[2])
+				url = url1Match[1]
+				name = url1Match[2]
+			elif url2Match:
+				#print(url2Match[1], url2Match[2])
+				url = url2Match[1]
+				name = url2Match[2]
+			#url = match.group(1).replace('\\/', '/')
+			#name = match.group(2)
+			#if name == '':
+			#	name = url
+			if not urlparse(url).netloc:
+				url = 'https://borderlands.com' + url
+			#print('[{}]({})'.format(match.group(2), url))
+			return '[{}]({})'.format(name, url)
+
+		text = text.replace('\"', '"')
+		text = text.replace('\\\\', '\\')
+		text = text.replace('\/', '/')
+		text = text.replace('&amp;', '&')
+		text = text.replace('&quot;', '"')
+		text = text.replace('&lt;', '<')
+		text = text.replace('&gt;', '>')
+		text = text.replace('&nbsp;', ' ')
+		text = text.replace('&ldquo;', '“')
+		text = text.replace('&rdquo;', '”')
+		text = text.replace('&rsquo;', '’')
+		text = text.replace('<b>', '**')
+		text = text.replace('</b>', '**')
+		text = text.replace('<strong>', '**')
+		text = text.replace('</strong>', '**')
+		text = text.replace('<i>', '***')
+		text = text.replace('</i>', '***')
+		text = text.replace('<em>', '***')
+		text = text.replace('</em>', '***')
+		text = text.replace('<br />', '')
+		text = text.replace('<table>', '')
+		text = text.replace('</table>', '')
+		text = text.replace('<br />', '')
+		text = text.replace('<tr>', '')
+		text = text.replace('</tr>', '')
+		text = text.replace('<td>', '')
+		text = text.replace('</td>', '')
+		text = text.replace('</p><p>', '\n')
+		text = text.replace('<p>', '')
+		text = text.replace('</p>', '')
+		text = re.sub('<iframe.*?</iframe>', '', text)
+		text = re.sub('<img src.*? />', 'IMAGE', text)
+		text = re.sub('(<a href.*?<\/a>(/">)?)', urlFix, text)
+		text = re.sub('\<br\/\>', '\n', text)
+		text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
+		text = re.sub('<div.*?>(.*?)<\/div>', '$1', text)
+		text = re.sub('<ul>.*?</ul>', '', text)
+		text = re.sub('<li>.*?</li>', '', text)
+
+		#print(type, text)
+		return text
+
+	async def fetchAltNewsDescription(self, url):
+		page = await fetchWebpage(self, f'https://borderlands.com{url}')
+		
+		description = ''
+		listItems = [ ]
+		newsMatchP = re.compile('<div class="relative wysiwyg-content font-body-light leading-normal mt-md -mb-md">(.*?)</div>', re.DOTALL | re.MULTILINE)
+		
+		content = newsMatchP.search(page)
+		if content:
+			#print(content[1])
+			for li in re.findall('<li>(.*?)</li>', content[1]):
+				listItems.append(li)
+
+			description = self.subMarkup(content[1]).strip()
+		return description[0:2048], listItems
+
+	@tasks.loop(minutes=10.0)
 	async def updateLoop(self):
 		try:
 			newsPage = await fetchWebpage(self, 'https://borderlands.com/en-US/news/')
@@ -47,10 +131,12 @@ class Borderlands(commands.Cog):
 				title = newsItem[1]
 				category = newsItem[2]
 				thumbnail = newsItem[3]
-				description = await self.fetchNewsDescription(url)
+				description, listItems = await self.fetchAltNewsDescription(url)
 				
 				embed = discord.Embed(title=title, description=description, url=f'https://borderlands.com{url}', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 				embed.set_image(url=f'{thumbnail}') # Check if fully qualified
+				if listItems:
+					embed.add_field(name='Additional Notes', value="\n".join(listItems))
 				postID = hashlib.sha1(f'{url}{title}{thumbnail}{category}'.encode()).hexdigest() # Maybe don't do it like this
 				if postID is None:
 				 print('PostID was None, skipping')
