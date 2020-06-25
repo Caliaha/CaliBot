@@ -136,7 +136,9 @@ class Borderlands(commands.Cog):
 				embed = discord.Embed(title=title, description=description, url=f'https://borderlands.com{url}', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
 				embed.set_image(url=f'{thumbnail}') # Check if fully qualified
 				if listItems:
-					embed.add_field(name='Additional Notes', value="\n".join(listItems))
+					li = "\n".join(listItems)
+					li = li[0:2048]
+					embed.add_field(name='Additional Notes', value=li)
 				postID = hashlib.sha1(f'{url}{title}{thumbnail}{category}'.encode()).hexdigest() # Maybe don't do it like this
 				if postID is None:
 				 print('PostID was None, skipping')
