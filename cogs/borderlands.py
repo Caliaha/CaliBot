@@ -137,7 +137,7 @@ class Borderlands(commands.Cog):
 				embed.set_image(url=f'{thumbnail}') # Check if fully qualified
 				if listItems:
 					li = "\n".join(listItems)
-					li = li[0:2048]
+					li = li[0:1024]
 					embed.add_field(name='Additional Notes', value=li)
 				postID = hashlib.sha1(f'{url}{title}{thumbnail}{category}'.encode()).hexdigest() # Maybe don't do it like this
 				if postID is None:
