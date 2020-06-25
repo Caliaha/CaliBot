@@ -51,7 +51,8 @@ class Nintendo(commands.Cog):
 					if clas == 'short-body': # Title
 						postID = f'{postID}{div.h2.text.strip()}'
 						embed.title = div.h2.text.strip()
-						embed.description = div.span.text.strip()
+						desc = div.span.text.strip()
+						embed.description = desc[0:2048]
 						print('Added title and description')
 					if clas == 'banner':
 						embed.set_image(url=f'https://www.nintendo.com{div.img["src"]}')
