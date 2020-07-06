@@ -65,7 +65,7 @@ def checkPermissions(command):
 		async def wrapper(*args, **kwargs):
 			self = args[0]
 			ctx = args[1]
-			print(command, self, ctx)
+			#print(command, self, ctx)
 			if isinstance(ctx.message.channel, discord.abc.PrivateChannel) is True:
 				return await func(*args, **kwargs)
 			if await checkPermission(self, ctx, command) is True:
