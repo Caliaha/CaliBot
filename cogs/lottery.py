@@ -398,6 +398,7 @@ class Lottery(commands.Cog):
 				reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
 			except asyncio.TimeoutError:
 				editing = False
+				needCommit = False
 				await message.delete()
 			except Exception as e:
 				print(e)
