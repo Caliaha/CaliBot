@@ -165,10 +165,12 @@ class Lottery(commands.Cog):
 			else:
 				await ctx.send('The lottery doesn\'t appear to have been properly setup.  Please use ***!lottery setup*** to initialize the default values.')
 			return False
-
-		msg = f'A total of {debug["totalTickets"]} tickets were sold, for a total of {debug["totalTickets"]*debug["ticketValue"]}g'
-		msg = f'{msg}\nThe current jackpot is {debug["prizePool"] + debug["totalTickets"]*debug["ticketValue"]}g'
-		msg = f'{msg}\nThe guilds take is {debug["guildCutPercentage"]*100}% of the jackpot'
+		jackpot = debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]
+		guildCut = round(jackpot * debug["guildCutPercentage"])
+		payout = round(jackpot - guildCut)
+		msg = f'A total of {debug["totalTickets"]} tickets were sold for a total of {debug["totalTickets"]*debug["ticketValue"]}g'
+		msg = f'{msg}\nThe payout is {payout}g'
+		msg = f'{msg}\nThe guilds take is {debug["guildCutPercentage"]*100}% ({guildCut}) of the jackpot ({jackpot})'
 		if debug['guarenteedWin']:
 			msg = f'{msg}\nA winner is guarenteed'
 		else:
@@ -184,11 +186,11 @@ class Lottery(commands.Cog):
 		else:
 			msg = f'{msg}\nNo winner could be found for **{debug["drawnTicketNumber"]}**'
 		if debug["guildCutPercentage"] > 0:
-			msg = f'{msg}\nThe guild will receive {(debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"]}g'
+			msg = f'{msg}\nThe guild will receive {guildCut}g'
 		await ctx.send(f'{msg}')
 		
-		newPrizePool = debug["prizePool"] - ((debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"])
-		print(f'{debug["prizePool"]} was reduced by {(debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"]} to {newPrizePool}')
+		newPrizePool = debug["prizePool"] - guildCut
+		print(f'{debug["prizePool"]} was reduced by {guildCut} to {newPrizePool}')
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
