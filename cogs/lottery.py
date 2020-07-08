@@ -16,13 +16,13 @@ class Lottery(commands.Cog):
 		try:
 			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			with connection.cursor() as cursor:
-				sql = "SELECT `ticketValue`, `winPercentage`, `guildCutPercentage` FROM `lotterysettings` WHERE `guildID`=%s"
+				sql = "SELECT `ticketValue`, `winPercentage`, `guildCutPercentage`, `prizePool` FROM `lotterysettings` WHERE `guildID`=%s"
 				cursor.execute(sql, (guildID))
 				result = cursor.fetchone()
 				if result is None:
-					return None, None, None
+					return None, None, None, None
 				else:
-					return result['ticketValue'], result['winPercentage'] / 100, result['guildCutPercentage'] / 100
+					return result['ticketValue'], result['winPercentage'] / 100, result['guildCutPercentage'] / 100, result['prizePool']
 		except Exception as e:
 			print(e)
 		finally:
@@ -167,6 +167,7 @@ class Lottery(commands.Cog):
 			return False
 
 		msg = f'A total of {debug["totalTickets"]} tickets were sold, for a total of {debug["totalTickets"]*debug["ticketValue"]}g'
+		msg = f'{msg}\nThe current jackpot is {debug["prizePool"] + debug["totalTickets"]*debug["ticketValue"]}g'
 		msg = f'{msg}\nThe guilds take is {debug["guildCutPercentage"]*100}% of the jackpot'
 		if debug['guarenteedWin']:
 			msg = f'{msg}\nA winner is guarenteed'
@@ -183,19 +184,34 @@ class Lottery(commands.Cog):
 		else:
 			msg = f'{msg}\nNo winner could be found for **{debug["drawnTicketNumber"]}**'
 		if debug["guildCutPercentage"] > 0:
-			msg = f'{msg}\nThe guild will receive {debug["totalTickets"]*debug["ticketValue"]*debug["guildCutPercentage"]}g'
+			msg = f'{msg}\nThe guild will receive {(debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"]}g'
 		await ctx.send(f'{msg}')
-		return True
+		
+		newPrizePool = debug["prizePool"] - ((debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"])
+		print(f'{debug["prizePool"]} was reduced by {(debug["prizePool"] + debug["totalTickets"] * debug["ticketValue"]) * debug["guildCutPercentage"]} to {newPrizePool}')
+		try:
+			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			with connection.cursor() as cursor:
+				sql = "UPDATE `lotterysettings` SET `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
+				cursor.execute(sql, (newPrizePool, ctx.guild.id))
+				connection.commit()
+				return True
+		except Exception as e:
+			print(e)
+			return False
+		finally:
+			connection.close()
 
 	async def drawTicket(self, guildID, guarenteedWin=False):
-		ticketValue, winPercentage, guildCutPercentage = await self.loadSettings(guildID)
+		ticketValue, winPercentage, guildCutPercentage, prizePool = await self.loadSettings(guildID)
 		debug = { }
 		debug['ticketValue'] = ticketValue
 		debug['winPercentage'] = winPercentage
 		debug['guildCutPercentage'] = guildCutPercentage
+		debug['prizePool'] = prizePool
 		debug['guarenteedWin'] = guarenteedWin
 		debug['ticketsAssigned'] = { }
-		if ticketValue == None or winPercentage == None or guildCutPercentage == None:
+		if ticketValue == None or winPercentage == None or guildCutPercentage == None or prizePool == None:
 			return False, debug
 		try:
 			connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
@@ -377,14 +393,14 @@ class Lottery(commands.Cog):
 	@checkPermissions('lottery')
 	@doThumbs()
 	async def setup(self, ctx):
-		ticketValue, winPercentage, guildCutPercentage = await self.loadSettings(ctx.guild.id)
+		ticketValue, winPercentage, guildCutPercentage, prizePool = await self.loadSettings(ctx.guild.id)
 		if winPercentage:
 			winPercentage = winPercentage * 100
 		if guildCutPercentage:
 			guildCutPercentage = guildCutPercentage * 100
-		emojis = [ '💰', '🎰', '✂️', '✔️', '❌' ]
+		emojis = [ '💰', '🎰', '✂️', '🏆', '✔️', '❌' ]
 
-		message = await ctx.send(f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}')
+		message = await ctx.send(f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}\nThe prize pool is {prizePool}')
 		editing = True
 		needCommit = False
 		while editing:
@@ -476,6 +492,27 @@ class Lottery(commands.Cog):
 							await response.delete()
 						except Exception as e:
 							print(e)
+				if reaction.emoji == '🏆':
+					def goldCheck(m):
+						return m.author == ctx.author and m.channel == ctx.channel
+					waiting = True
+					while waiting:
+						await message.edit(content=f'Please enter a new prize pool between -2,147,483,648 and 2,147,483,647 (inclusive). No commas please or decimals.')
+						response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						if response.content == 'stop':
+							waiting = False
+						try:
+							g = int(response.content)
+							if g >= -2147483648 and g <= 2147483648:
+								prizePool = g
+								needCommit = True
+								waiting = False
+						except:
+							pass
+						try:
+							await response.delete()
+						except Exception as e:
+							print(e)
 				if reaction.emoji == '✔️':
 					editing = False
 				if reaction.emoji == '❌':
@@ -485,7 +522,7 @@ class Lottery(commands.Cog):
  
 				print(reaction.emoji)
 				try:
-					await message.edit(content=f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}')
+					await message.edit(content=f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}\nThe prize pool is {prizePool}')
 				except:
 					pass
 
@@ -494,7 +531,7 @@ class Lottery(commands.Cog):
 				connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 				with connection.cursor() as cursor:
 					#Check if entry exists then update or create one
-					sql = "SELECT `ticketValue`, `winPercentage`, `guildCutPercentage` FROM `lotterysettings` WHERE `guildID`=%s"
+					sql = "SELECT `ticketValue`, `winPercentage`, `guildCutPercentage`, `prizePool` FROM `lotterysettings` WHERE `guildID`=%s"
 					cursor.execute(sql, (ctx.guild.id))
 					result = cursor.fetchone()
 					if ticketValue == None:
@@ -503,13 +540,15 @@ class Lottery(commands.Cog):
 						winPercentage = 10
 					if guildCutPercentage == None:
 						guildCutPercentage = 0
+					if prizePool == None:
+						prizePool = 0
 					if result is None:
-						sql = "INSERT INTO `lotterysettings` (`guildID`, `ticketValue`, `winPercentage`, `guildCutPercentage`) VALUES(%s, %s, %s, %s)"
-						cursor.execute(sql, (ctx.guild.id, ticketValue, winPercentage, guildCutPercentage))
+						sql = "INSERT INTO `lotterysettings` (`guildID`, `ticketValue`, `winPercentage`, `guildCutPercentage`, `prizePool`) VALUES(%s, %s, %s, %s, %s)"
+						cursor.execute(sql, (ctx.guild.id, ticketValue, winPercentage, guildCutPercentage, prizePool))
 						connection.commit()
 					else:
-						sql = "UPDATE `lotterysettings` SET `ticketValue` = %s, `winPercentage` = %s, `guildCutPercentage` = %s WHERE `guildID`=%s LIMIT 1"
-						cursor.execute(sql, (ticketValue, winPercentage, guildCutPercentage, ctx.guild.id))
+						sql = "UPDATE `lotterysettings` SET `ticketValue` = %s, `winPercentage` = %s, `guildCutPercentage` = %s, `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
+						cursor.execute(sql, (ticketValue, winPercentage, guildCutPercentage, prizePool, ctx.guild.id))
 						connection.commit()
 					return True
 			finally:
