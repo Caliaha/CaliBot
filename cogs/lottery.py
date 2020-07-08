@@ -382,7 +382,7 @@ class Lottery(commands.Cog):
 				
 				result = cursor.fetchone()
 				if result:
-					await ctx.send(f'The lottery is current set to a {result["winPercentage"]}% win rate with a {result["guildCutPercentage"]}% guild cut and tickets are {result["ticketValue"]} gold each.')
+					await ctx.send(f'The lottery is current set to a {result["winPercentage"]}% win rate with a {result["guildCutPercentage"]}% guild cut and tickets are {result["ticketValue"]} gold each.  The base prize pool is {result["prizePool"]}')
 				else:
 					await ctx.send(f'No settings found, please use ***!lottery setup*** to initialize the settings')
 				return True
