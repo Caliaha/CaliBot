@@ -205,7 +205,7 @@ class WowHead(commands.Cog):
 			text = re.sub('(<a href.*?<\/a>(/">)?)', urlFix, text)
 			text = re.sub('\<br\/\>', '\n', text)
 			text = re.sub(r'\\r', '', text) # Filter out weird \r's that they have added
-			text = re.sub('<div.*?>(.*?)<\/div>', '\1', text)
+			text = re.sub('<div.*?>(.*?)<\/div>', '\\1', text)
 
 		#print(type, text)
 		return text
