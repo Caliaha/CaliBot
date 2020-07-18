@@ -67,7 +67,7 @@ class MHW(commands.Cog):
 			titleRegex = re.compile('<div class="title"><span>(.*?)</span>')
 			imageRegex = re.compile('<td class="image">.*?<img src ="(.*?)" />', re.DOTALL)
 			levelRegex = re.compile('<td class="level"><span>(.*?)</span></td>')
-			descriptionRegex = re.compile('<p class="txt">(.*?)<span class="addTxt">(.*?)</span></p>')
+			descriptionRegex = re.compile('<p class="txt">(.*?)<span class="addTxt">(.*?)</span>.*?</p>')
 			locationRegex = re.compile('<li>Locale: <span>(.*?)<span></li>')
 			requirementsRegex = re.compile('<li>Requirements: <span>(.*?)</span></li>', re.DOTALL)
 			availabilityRegex = re.compile('<p class="txt">.*?Available.*?<span>(\d+)/(\d+) (\d+):(\d+)(<br>)?〜(<br>)?(\d+)/(\d+) (\d+):(\d+)</span>', re.DOTALL)
@@ -146,7 +146,8 @@ class MHW(commands.Cog):
 					embed.set_footer(text=f'Available {availabilityStart} ~ {availabilityEnd}')
 				
 				if description:
-					embed.description = self.unescape(description[1] + (f'\n{description[2]}' if description[2] else ''))
+					descr = re.sub('""(.*?)""', '***\\1***', description[1] + (f'\n{description[2]}' if description[2] else ''))
+					embed.description = self.unescape(descr)
 				if image:
 					embed.set_image(url=image[1])
 				if level and location and requirements:
