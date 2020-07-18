@@ -110,17 +110,45 @@ class Lottery(commands.Cog):
 			reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
 		except asyncio.TimeoutError:
 			await message.delete()
+			return False
 		else:
 			try:
-				connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-				with connection.cursor() as cursor:
+				ticketValue, winPercentage, guildCutPercentage, prizePool = await self.loadSettings(ctx.guild.id)
+				if ticketValue == None or winPercentage == None or guildCutPercentage == None or prizePool == None:
+					return False
+				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+				async with connection.cursor() as cursor:
+					sql = "SELECT SUM(`tickets`) total FROM `lottery` WHERE `guildID`=%s"
+					await cursor.execute(sql, (ctx.guild.id))
+					result = await cursor.fetchone()
+					totalTickets = 0
+					if result['total']:
+						totalTickets = int(result['total'])
+					newPrizePool = (totalTickets * ticketValue) + prizePool
+					sql = "UPDATE `lotterysettings` SET `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
+					await cursor.execute(sql, (newPrizePool, ctx.guild.id))
 					sql = "DELETE FROM `lottery` WHERE `guildID`=%s"
-					cursor.execute(sql, (ctx.guild.id))
-					connection.commit()
+					await cursor.execute(sql, (ctx.guild.id))
+					
+					try:
+						await message.delete()
+					except:
+						pass
+					try:
+						await ctx.send(f'All lottery tickets for {ctx.guild.name} have been deleted and {totalTickets * ticketValue}g from tickets has been added to prize pool. {newPrizePool}g is the new prize pool.')
+					except:
+						print('Failed to send message in removealltickets')
+						await ctx.send('Bruh')
+					else:
+						try:
+							await connection.commit()
+						except:
+							return False
+						return True
 
-					await ctx.send("All lottery tickets for {} have been deleted".format(ctx.guild.name))
-					await message.delete()
-					return True
+				return True
+			except Exception as e:
+				print(e)
 			finally:
 				connection.close()
 
@@ -169,7 +197,7 @@ class Lottery(commands.Cog):
 		guildCut = round(jackpot * debug["guildCutPercentage"])
 		payout = round(jackpot - guildCut)
 		msg = f'A total of {debug["totalTickets"]} tickets were sold for a total of {debug["totalTickets"]*debug["ticketValue"]}g'
-		msg = f'{msg}\nThe payout is {payout}g'
+		msg = f'{msg}\n***The payout is {payout}g***'
 		msg = f'{msg}\nThe guilds take is {debug["guildCutPercentage"]*100}% ({guildCut}) of the jackpot ({jackpot})'
 		if debug['guarenteedWin']:
 			msg = f'{msg}\nA winner is guarenteed'
@@ -182,27 +210,32 @@ class Lottery(commands.Cog):
 				member = ctx.guild.get_member(int(winner))
 			except:
 				member = winner
-			msg = f'{msg}\n{member} has won with a matching ticket'
+			msg = f'{msg}\n***{member}*** has won with a matching ticket'
 		else:
 			msg = f'{msg}\nNo winner could be found for **{debug["drawnTicketNumber"]}**'
 		if debug["guildCutPercentage"] > 0:
 			msg = f'{msg}\nThe guild will receive {guildCut}g'
-		await ctx.send(f'{msg}')
-		
-		newPrizePool = debug["prizePool"] - guildCut
-		print(f'{debug["prizePool"]} was reduced by {guildCut} to {newPrizePool}')
 		try:
-			connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
-			with connection.cursor() as cursor:
-				sql = "UPDATE `lotterysettings` SET `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
-				cursor.execute(sql, (newPrizePool, ctx.guild.id))
-				connection.commit()
-				return True
-		except Exception as e:
-			print(e)
+			await ctx.send(f'{msg}')
+		except:
+			print('Failed to send !draw message')
 			return False
-		finally:
-			connection.close()
+		else:
+			newPrizePool = debug["prizePool"] - guildCut
+			print(f'{debug["prizePool"]} was reduced by {guildCut} to {newPrizePool}')
+			try:
+				connection = await aiomysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=aiomysql.cursors.DictCursor)
+				async with connection.cursor() as cursor:
+					sql = "UPDATE `lotterysettings` SET `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
+					print('Performing transaction')
+					await cursor.execute(sql, (newPrizePool, ctx.guild.id))
+					await connection.commit()
+			except Exception as e:
+				print(e)
+				return False
+			finally:
+				connection.close()
+			return True
 
 	async def drawTicket(self, guildID, guarenteedWin=False):
 		ticketValue, winPercentage, guildCutPercentage, prizePool = await self.loadSettings(guildID)
