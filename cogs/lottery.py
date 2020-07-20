@@ -39,7 +39,7 @@ class Lottery(commands.Cog):
 		help['!draw'] = 'Picks winner from ticket holders'
 		help['!giveticket @member [amount]'] = 'Gives one or amount of tickets to member, can be negative'
 		help['!removetickets @member'] = 'Removes all tickets from member'
-		help['!removealltickets'] = 'Removes all tickets from all members of guild'
+		help['!removealltickets'] = 'Removes all tickets and adds ticket gold to pot'
 
 		helpBox = BoxIt()
 		helpBox.setTitle('Lottery Commands')
@@ -101,10 +101,12 @@ class Lottery(commands.Cog):
 	async def removealltickets(self, ctx):
 		"""Removes all tickets"""
 		message = await ctx.send('This will remove all tickets from all members of this guild and can not be undone, react with 👌 to confirm.')
+		okhand_emojies = [ '👌', '👌🏻', '👌🏽', '👌🏾', '👌🏿' ]
+		for emoji in okhand_emojies:
+				await message.add_reaction(emoji)
 
 		def check(reaction, user):
-			okhand_emojies = [ '👌', '👌🏻', '👌🏽', '👌🏾', '👌🏿' ]
-			return user == ctx.author and str(reaction.emoji) in okhand_emojies
+			return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in okhand_emojies
 
 		try:
 			reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
@@ -435,7 +437,7 @@ class Lottery(commands.Cog):
 			guildCutPercentage = guildCutPercentage * 100
 		emojis = [ '💰', '🎰', '✂️', '🏆', '✔️', '❌' ]
 
-		message = await ctx.send(f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}\nThe prize pool is {prizePool}')
+		message = await ctx.send(f'The ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}%\nThe guild cut is {guildCutPercentage}%\nThe prize pool is {prizePool}')
 		editing = True
 		needCommit = False
 		while editing:
@@ -443,14 +445,22 @@ class Lottery(commands.Cog):
 				await message.add_reaction(emoji)
 
 			def check(reaction, user):
-					return user == ctx.author and str(reaction.emoji) in emojis
+					return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in emojis
 
 			try:
 				reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
 			except asyncio.TimeoutError:
 				editing = False
 				needCommit = False
-				await message.delete()
+				try:
+					await message.delete()
+				except:
+					pass
+				try:
+					await ctx.send('lottery setup timed out, no changes were saved.')
+				except:
+					pass
+				
 			except Exception as e:
 				print(e)
 			else:
@@ -470,7 +480,12 @@ class Lottery(commands.Cog):
 					waiting = True
 					while waiting:
 						await message.edit(content=f'Please enter a new ticket value in gold. Whole numbers only, I don\'t believe in decimals or fractions')
-						response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						try:
+							response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						except:
+							waiting = False
+							continue
+						
 						if response.content == 'stop':
 							waiting = False
 						try:
@@ -491,7 +506,11 @@ class Lottery(commands.Cog):
 					waiting = True
 					while waiting:
 						await message.edit(content=f'Please enter a new win percentage between 1 and 100 (inclusive). Whole numbers only, I don\'t believe in decimals or fractions. Also no zero, messes with my allergies.')
-						response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						try:
+							response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						except:
+							waiting = False
+							continue
 						if response.content == 'stop':
 							waiting = False
 						try:
@@ -512,7 +531,11 @@ class Lottery(commands.Cog):
 					waiting = True
 					while waiting:
 						await message.edit(content=f'Please enter a new guild cut percentage between 0 and 100 (inclusive). Whole numbers only, I don\'t believe in decimals or fractions.')
-						response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						try:
+							response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						except:
+							waiting = False
+							continue
 						if response.content == 'stop':
 							waiting = False
 						try:
@@ -533,7 +556,11 @@ class Lottery(commands.Cog):
 					waiting = True
 					while waiting:
 						await message.edit(content=f'Please enter a new prize pool between -2,147,483,648 and 2,147,483,647 (inclusive). No commas please or decimals.')
-						response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						try:
+							response = await self.bot.wait_for('message', timeout=60.0, check=goldCheck)
+						except:
+							waiting = False
+							continue
 						if response.content == 'stop':
 							waiting = False
 						try:
@@ -553,7 +580,14 @@ class Lottery(commands.Cog):
 				if reaction.emoji == '❌':
 					editing = False
 					needCommit = False
-					await message.delete()
+					try:
+						await ctx.send('Lottery setup was cancelled, no changes saved.')
+					except:
+						pass
+					try:
+						await message.delete()
+					except:
+						pass
  
 				print(reaction.emoji)
 				try:
@@ -562,6 +596,10 @@ class Lottery(commands.Cog):
 					pass
 
 		if needCommit:
+			try:
+				await message.delete()
+			except:
+				pass
 			try:
 				connection = pymysql.connect(host=self.bot.MYSQL_HOST, user=self.bot.MYSQL_USER, password=self.bot.MYSQL_PASSWORD, db=self.bot.MYSQL_DB, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 				with connection.cursor() as cursor:
@@ -585,7 +623,12 @@ class Lottery(commands.Cog):
 						sql = "UPDATE `lotterysettings` SET `ticketValue` = %s, `winPercentage` = %s, `guildCutPercentage` = %s, `prizePool` = %s WHERE `guildID`=%s LIMIT 1"
 						cursor.execute(sql, (ticketValue, winPercentage, guildCutPercentage, prizePool, ctx.guild.id))
 						connection.commit()
-					return True
+			except Exception as e:
+				await ctx.send(f'Something went wrong while attempting to update lottery info, {e}')
+				return False
+			else:
+				await ctx.send(f'Lottery settings updated\nThe ticket value is currently set to {ticketValue}\nThe win percentage is {winPercentage}\nThe guild cut is {guildCutPercentage}\nThe prize pool is {prizePool}')
+				return True
 			finally:
 				connection.close()
 		return True
