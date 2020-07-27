@@ -102,8 +102,10 @@ class Lottery(commands.Cog):
 		"""Removes all tickets"""
 		message = await ctx.send('This will remove all tickets from all members of this guild and can not be undone, react with 👌 to confirm.')
 		okhand_emojies = [ '👌', '👌🏻', '👌🏽', '👌🏾', '👌🏿' ]
-		for emoji in okhand_emojies:
-				await message.add_reaction(emoji)
+		try:
+			await message.add_reaction('👌')
+		except:
+			pass
 
 		def check(reaction, user):
 			return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in okhand_emojies
@@ -442,7 +444,10 @@ class Lottery(commands.Cog):
 		needCommit = False
 		while editing:
 			for emoji in emojis:
-				await message.add_reaction(emoji)
+				try:
+					await message.add_reaction(emoji)
+				except:
+					print('Failed to add emoji in lottery setup')
 
 			def check(reaction, user):
 					return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in emojis
