@@ -209,7 +209,7 @@ class Warframe(commands.Cog):
 		if self.cetusDawn == 0 or self.vallisHot == 0:
 			return
 		currentTime = time.time()
-		if time.time() >= self.cetusDawn: # Old date is expired, so create new expire date based on old one until updateLoop fixes it
+		while currentTime >= self.cetusDawn: # Old date is expired, so create new expire date based on old one until updateLoop fixes it
 			self.cetusDawn = self.cetusDawn + (150 * 60)
 		#if currentTime >= self.vallisHot:
 
@@ -228,9 +228,9 @@ class Warframe(commands.Cog):
 		#	print('Vallis is Hot', 'Cold in')
 		#else:
 		#	print('Vallis is Cold', 'Warm in', datetime.datetime.fromtimestamp(self.cetusDawn-currentTime).strftime('%M:%S'))
-		#print('Current Time:', datetime.datetime.fromtimestamp(currentTime).strftime('%Y-%m-%d %H:%M:%S'))
-		#print('Cetus:', datetime.datetime.fromtimestamp(self.cetusDawn).strftime('%Y-%m-%d %H:%M:%S'))
-		#print(self.cetusDawn - currentTime, 100 * 60, self.cetusDawn, currentTime)
+		print('Current Time:', datetime.datetime.fromtimestamp(currentTime).strftime('%Y-%m-%d %H:%M:%S'))
+		print('Cetus:', datetime.datetime.fromtimestamp(self.cetusDawn).strftime('%Y-%m-%d %H:%M:%S'))
+		print(self.cetusDawn - currentTime, 100 * 60, self.cetusDawn, currentTime)
 		if self.cetusDawn - currentTime >= (50 * 60): # Not night time
 			if self.lastPresence.startswith('☀'):
 				await self.triggerCycleAlerts('cetus', 'day', self.cetusDawn-(currentTime+(50*60)))
