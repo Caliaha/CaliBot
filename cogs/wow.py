@@ -79,6 +79,17 @@ class WoW(commands.Cog):
 	@commands.command()
 	@deleteMessage()
 	@doThumbs()
+	async def auth(self, ctx):
+		embed=discord.Embed(title='Blizzard Authenticator', url='https://us.battle.net/support/en/article/24520', color=discord.Color(int(self.bot.DEFAULT_EMBED_COLOR, 16)))
+		embed.add_field(name='Download', value='[Google Play](https://play.google.com/store/apps/details?id=com.blizzard.bma) [App Store](https://itunes.apple.com/app/blizzard-authenticator/id306862897)', inline=True)
+		#embed.add_field(name='Time Left', value='N/A', inline=True)
+		#embed.add_field(name='Queue Position', value='N/A', inline=True)
+		#embed.add_field(name='Crawled', value='N/A', inline=True)
+		await ctx.send(embed=embed)
+https://us.battle.net/support/en/article/24520
+	@commands.command()
+	@deleteMessage()
+	@doThumbs()
 	async def mythic(self, ctx, *args):
 		"""Shows raider.io mythic+ scores for a guild"""
 
@@ -213,7 +224,7 @@ class WoW(commands.Cog):
 				rawJSON = urllib.request.urlopen(urllib.request.Request(f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={urllib.parse.quote(realm)}&guild={urllib.parse.quote(guild)}&season=season-bfa-4&class=all&role=all&page=0', data=None, headers=headers)).read().decode('utf-8')
 			except:
 				try:
-					rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={urllib.parse.quote(realm)}&guild={urllib.parse.quote(guild)}&season=season-bfa-4&class=all&role=all&page=0')
+					rawJSON = await fetchWebpage(self, f'https://raider.io/api/mythic-plus/rankings/characters?region=us&realm={urllib.parse.quote(realm)}&guild={urllib.parse.quote(guild)}&season=season-sl-1&class=all&role=all&page=0')
 				except:
 					await ctx.send('Error fetching JSON for that guild (guild or realm probably doesn\'t exist or **has not been scanned by raider.io**), check your spelling\nUsage: !mythic "guild" "realm"')
 					await updateableMessage.delete()
