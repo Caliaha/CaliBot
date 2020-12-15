@@ -86,7 +86,7 @@ class WoW(commands.Cog):
 		#embed.add_field(name='Queue Position', value='N/A', inline=True)
 		#embed.add_field(name='Crawled', value='N/A', inline=True)
 		await ctx.send(embed=embed)
-https://us.battle.net/support/en/article/24520
+
 	@commands.command()
 	@deleteMessage()
 	@doThumbs()
